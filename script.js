@@ -1,4 +1,4 @@
-// Global variables
+/ Global variables
 let sidebarCollapsed = false;
 let chatHistory = [];
 let isDarkMode = false;
