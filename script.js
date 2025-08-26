@@ -162,9 +162,18 @@ async function sendMessage() {
 
         hideTyping();
 
-        if (!response.ok) throw new Error(`API Error: ${response.status}`);
+        const text = await response.text();
+        let data; 
+        try { data = text ? JSON.parse(text) : {}; } catch { data = { raw:text }; }
 
-        const data = await response.json();
+        if (!response.ok) {
+            console.error("Agent Error Response:", data);
+            updateAPIStatus('error','Connection Error');
+            const details = typeof data === 'object' ? (data.details || data.error || JSON.stringify(data)) : String(data);
+            addMessage(`⚠️ Error ${response.status}. ${details || 'Request failed.'}`,'assistant',true);
+            return;
+        }
+
         console.log("Agent Response:", data);
 
         let aiResponse = "";
@@ -187,7 +196,7 @@ async function sendMessage() {
         hideTyping();
         console.error("Agent Error:", err);
         updateAPIStatus('error','Connection Error');
-        addMessage("⚠️ There was an error connecting to the Legal Agent.","assistant",true);
+        addMessage("⚠️ There was an error connecting to the Legal Agent.",'assistant',true);
     }
 }
 
