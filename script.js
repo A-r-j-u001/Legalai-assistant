@@ -209,3 +209,4 @@ messageInput.addEventListener('keydown',function(e){ if(e.key==="Enter" && !e.sh
 sendBtn.addEventListener('click',sendMessage);
 newChatBtn.addEventListener('click',()=>{ chatHistory=[]; messagesContainer.innerHTML=""; });
 
+
