@@ -1,4 +1,4 @@
-/ Global variables
+// Global variables
 let sidebarCollapsed = false;
 let chatHistory = [];
 let isDarkMode = false;
@@ -208,3 +208,4 @@ messageInput.addEventListener('input',()=>{updateSendButton();});
 messageInput.addEventListener('keydown',function(e){ if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); if(!sendBtn.disabled) sendMessage(); }});
 sendBtn.addEventListener('click',sendMessage);
 newChatBtn.addEventListener('click',()=>{ chatHistory=[]; messagesContainer.innerHTML=""; });
+
