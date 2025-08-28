@@ -53,7 +53,7 @@ export default async function handler(req, res) {
     console.log("QRaptor API Response Status:", response.status);
     console.log("QRaptor API Response Headers:", Object.fromEntries(response.headers.entries()));
 
-    // Get response text first to handle both JSON and non-JSON responses
+    // Get response text first to handle both JSON and SSE responses
     const responseText = await response.text();
     console.log("QRaptor API Raw Response:", responseText);
 
@@ -77,15 +77,47 @@ export default async function handler(req, res) {
       });
     }
 
-    // Try to parse as JSON
+    // 🔹 FIXED: Handle SSE (Server-Sent Events) response format
     let data;
     try {
-      data = JSON.parse(responseText);
+      // Check if it's SSE format (contains "data:" lines)
+      if (responseText.includes('data: {')) {
+        console.log("Detected SSE format response");
+        
+        // Extract all data lines from SSE
+        const dataLines = responseText
+          .split('\n')
+          .filter(line => line.startsWith('data: {'))
+          .map(line => line.replace('data: ', ''));
+        
+        console.log("Extracted SSE data lines:", dataLines.length);
+        
+        // Find the final/complete response (with agentExecutionComplete: true)
+        let finalData = null;
+        for (const line of dataLines.reverse()) { // Start from last
+          try {
+            const parsed = JSON.parse(line);
+            if (parsed.agentExecutionComplete === true || parsed.outputs) {
+              finalData = parsed;
+              break;
+            }
+          } catch (e) {
+            console.log("Skipping unparseable line:", line.substring(0, 100));
+          }
+        }
+        
+        data = finalData || JSON.parse(dataLines[dataLines.length - 1]);
+        console.log("Final extracted data:", JSON.stringify(data, null, 2));
+        
+      } else {
+        // Regular JSON response
+        data = JSON.parse(responseText);
+      }
     } catch (parseError) {
-      console.error("Failed to parse response as JSON:", parseError);
+      console.error("Failed to parse response:", parseError);
       return res.status(500).json({
-        error: "Invalid JSON response from QRaptor API",
-        details: responseText
+        error: "Failed to parse QRaptor API response",
+        details: responseText.substring(0, 500) + "..."
       });
     }
 
