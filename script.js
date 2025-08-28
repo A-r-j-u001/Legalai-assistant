@@ -17,10 +17,6 @@ const statusText = document.getElementById('statusText');
 const apiStatus = document.getElementById('apiStatus');
 const themeToggle = document.getElementById('themeToggle');
 
-// --- REMOVE direct token & API url (handled in backend now) ---
-// const ACCESS_TOKEN = "...";
-// const QRAPTOR_API_URL = "...";
-
 // Initialize app
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('welcomeTime').textContent = getCurrentTime();
@@ -133,7 +129,7 @@ function updateSendButton() {
     }
 }
 
-// --- MAIN SEND ---
+// --- MAIN SEND - FIXED VERSION ---
 async function sendMessage() {
     const message = messageInput.value.trim();
     if (!message) return;
@@ -153,7 +149,7 @@ async function sendMessage() {
             timestamp: new Date().toISOString()
         };
 
-        // 🔹 Call your Vercel proxy instead of QRaptor directly
+        // Call your Vercel proxy
         const response = await fetch("/api/agent", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -176,18 +172,56 @@ async function sendMessage() {
 
         console.log("Agent Response:", data);
 
+        // 🔹 FIXED: Extract data from correct nested structure
         let aiResponse = "";
+        let responseData = data;
 
-        if (data.clarification_needed) {
-            aiResponse = "I need more information to provide accurate legal guidance. Could you please provide more details?";
-        } else {
-            if (data.legal_reply) aiResponse += data.legal_reply.trim();
-            if (data.general_reply) aiResponse += (aiResponse ? "\n\n":"") + data.general_reply.trim();
+        // Check if response has outputs nested structure
+        if (data.outputs) {
+            responseData = data.outputs;
         }
 
-        if (!aiResponse.trim()) aiResponse = "Sorry, I couldn't process your query.";
+        // Extract legal reply with proper checking
+        if (responseData.clarification_needed) {
+            aiResponse = "I need more information to provide accurate legal guidance. Could you please provide more details?";
+        } else {
+            // 🔹 FIXED: Check for legal_reply in the correct location
+            if (responseData.legal_reply && responseData.legal_reply.trim()) {
+                aiResponse += responseData.legal_reply.trim();
+            }
+            
+            // Add general reply if available
+            if (responseData.general_reply && responseData.general_reply.trim()) {
+                aiResponse += (aiResponse ? "\n\n" : "") + responseData.general_reply.trim();
+            }
+        }
 
-        aiResponse += "\n\n**Disclaimer:** This is for information only, not legal advice.";
+        // 🔹 FIXED: Handle empty response scenario
+        if (!aiResponse.trim()) {
+            // Check if there's a system_message with data
+            if (responseData.system_message && responseData.system_message.data) {
+                const systemData = responseData.system_message.data;
+                // Clean up the system data (remove None, False, etc.)
+                const cleanedData = systemData
+                    .replace(/\r\n/g, '\n')
+                    .replace(/None/g, '')
+                    .replace(/False/g, '')
+                    .replace(/True/g, '')
+                    .trim();
+                
+                if (cleanedData) {
+                    aiResponse = cleanedData;
+                }
+            }
+        }
+
+        // Final fallback if still no response
+        if (!aiResponse.trim()) {
+            aiResponse = "I apologize, but I couldn't generate a proper response to your query. Please try rephrasing your question.";
+        }
+
+        // Add disclaimer
+        aiResponse += "\n\n**Disclaimer:** This information is for educational purposes only and does not constitute legal advice. Please consult a qualified lawyer for legal matters.";
 
         addMessage(aiResponse,'assistant');
         updateAPIStatus('connected','Legal Agent Ready');
@@ -196,7 +230,7 @@ async function sendMessage() {
         hideTyping();
         console.error("Agent Error:", err);
         updateAPIStatus('error','Connection Error');
-        addMessage("⚠️ There was an error connecting to the Legal Agent.",'assistant',true);
+        addMessage("⚠️ There was an error connecting to the Legal Agent. Please try again.",'assistant',true);
     }
 }
 
@@ -208,5 +242,3 @@ messageInput.addEventListener('input',()=>{updateSendButton();});
 messageInput.addEventListener('keydown',function(e){ if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); if(!sendBtn.disabled) sendMessage(); }});
 sendBtn.addEventListener('click',sendMessage);
 newChatBtn.addEventListener('click',()=>{ chatHistory=[]; messagesContainer.innerHTML=""; });
-
-
