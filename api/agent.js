@@ -1,4 +1,4 @@
-// api/agent.js
+// api/agent.js// api/agent.js
 export default async function handler(req, res) {
   // CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -107,7 +107,6 @@ let cachedRefreshToken = null;
 async function loginWithCredentials() {
   const username = process.env.QRAPTOR_USERNAME;
   const password = process.env.QRAPTOR_PASSWORD;
-  const clientId = process.env.QRAPTOR_CLIENT_ID || "application";
 
   if (!username || !password) {
     throw new Error("Missing username or password");
@@ -122,7 +121,6 @@ async function loginWithCredentials() {
       },
       body: new URLSearchParams({
         grant_type: "password",
-        client_id: clientId,
         username: username,
         password: password,
       })
@@ -224,7 +222,6 @@ async function refreshQRaptorToken() {
       },
       body: new URLSearchParams({
         grant_type: "refresh_token",
-        client_id: process.env.QRAPTOR_CLIENT_ID || "application",
         refresh_token: cachedRefreshToken,
       })
     }
