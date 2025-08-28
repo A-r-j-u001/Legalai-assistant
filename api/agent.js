@@ -16,7 +16,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Only POST requests are allowed" });
   }
 
-  // Resolve token from env or header fallback
+  // 🔹 FIXED: Properly use environment variable
   const envToken = process.env.QRAPTOR_TOKEN;
   const headerToken = req.headers['x-qraptor-token'];
   const resolvedToken = envToken || (typeof headerToken === 'string' ? headerToken : Array.isArray(headerToken) ? headerToken[0] : undefined);
@@ -36,14 +36,14 @@ export default async function handler(req, res) {
     console.log("Token length:", resolvedToken?.length);
     console.log("Request body:", JSON.stringify(req.body, null, 2));
 
-    // Forward request to QRaptor API with exact endpoint
+    // 🔹 FIXED: Properly use template literal with environment token
     const response = await fetch(
       "https://appzkcrk3gkfiqe8.qraptor.ai/api/390/agent-controller/trigger-agent",
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization":  ${eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIzaldOMUt0YmpsRnFWRjFXY202RmdGZ2ZkRDJmaHNIOU9jRS1Hc0FCS29FIn0.eyJleHAiOjE3NTYzNjM5MzQsImlhdCI6MTc1NjM2MzYzNCwianRpIjoiODNmNzY1MTItNzY3ZC00NWM0LWEzYzAtZTE0ZjI3ZWZmMTU4IiwiaXNzIjoiaHR0cHM6Ly9wb3J0YWwucXJhcHRvci5haS9hdXRoMS9yZWFsbXMvYXBwemtjcmszZ2tmaXFlOCIsImF1ZCI6WyJyZWFsbS1tYW5hZ2VtZW50IiwiYWNjb3VudCJdLCJzdWIiOiIxYzc3ZTAyOC1hNjE0LTRhNDAtYTQzYy1lZTZjMTQ4YzNiNTAiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJhcHBsaWNhdGlvbiIsInNpZCI6ImZiNGJmODkyLWNlMmUtNDlkNi05OTZiLTRjMWFjN2E2M2FlMSIsImFjciI6IjEiLCJhbGxvd2VkLW9yaWdpbnMiOlsiaHR0cHM6Ly9hcHB6a2NyazNna2ZpcWU4LnFyYXB0b3IuYWkvIiwiaHR0cHM6Ly9wb3J0YWwucXJhcHRvci5haS8iXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbInBvcnRhbF9hZG1pbiIsInBvcnRhbF9hcHBfZGV2ZWxvcGVyIiwicG9ydGFsX2FwcF92aWV3ZXIiLCJvZmZsaW5lX2FjY2VzcyIsInBvcnRhbF9vd25lciIsImRlZmF1bHQtcm9sZXMtYXBwemtjcmszZ2tmaXFlOCIsInVtYV9hdXRob3JpemF0aW9uIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnsicmVhbG0tbWFuYWdlbWVudCI6eyJyb2xlcyI6WyJ2aWV3LWlkZW50aXR5LXByb3ZpZGVycyIsInZpZXctcmVhbG0iLCJtYW5hZ2UtaWRlbnRpdHktcHJvdmlkZXJzIiwiaW1wZXJzb25hdGlvbiIsInJlYWxtLWFkbWluIiwiY3JlYXRlLWNsaWVudCIsIm1hbmFnZS11c2VycyIsInF1ZXJ5LXJlYWxtcyIsInZpZXctYXV0aG9yaXphdGlvbiIsInF1ZXJ5LWNsaWVudHMiLCJxdWVyeS11c2VycyIsIm1hbmFnZS1ldmVudHMiLCJtYW5hZ2UtcmVhbG0iLCJ2aWV3LWV2ZW50cyIsInZpZXctdXNlcnMiLCJ2aWV3LWNsaWVudHMiLCJtYW5hZ2UtYXV0aG9yaXphdGlvbiIsIm1hbmFnZS1jbGllbnRzIiwicXVlcnktZ3JvdXBzIl19LCJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6InByb2ZpbGUgZW1haWwiLCJzdWJzY3JpcHRpb25faWQiOiJhcHB6a2NyazNna2ZpcWU4IiwiZW1haWxfdmVyaWZpZWQiOnRydWUsIm5hbWUiOiJBeXVzaCBLdW1hciIsInByZWZlcnJlZF91c2VybmFtZSI6ImF5dWt1bWFyIiwiZ2l2ZW5fbmFtZSI6IkF5dXNoIiwiZmFtaWx5X25hbWUiOiJLdW1hciIsImVtYWlsIjoiYXNwb2tlNDU2QG91dGxvb2suY29tIn0.LzEg56c3nnqRBt6TiSCQCXti5QaR11mT6hqhyWsn_gQ9KCc7tikh2ZFkmIgfi2Dh_rFUnjWB9hxAGO4BCuvAL-EtJ8KGiVjH1UX8Va0eEqLztNog79d-8MaAB6atTj2B1wmGAR3bOhLETJcqvt4jOUWH9wk1WF2VjmjV_qOHx4YwNQ5TWpkiy9AFFZatCNWowvTJBh31zX7Cx_HcDB6ZU6smW2O0Ry6EJtUNtUK6LMaCf5-NiLAUvy8tFasvSgS1vcmEc1eH3SElCDZ-WBbdNG4tyGk7v2Ylj9jbR1xSHZ5Yu_wtP36fMYWln_XJDLdPw1AhMF1akpyOZEcudymkag}`,
+          "Authorization": `Bearer ${resolvedToken}`,  // ✅ Fixed template literal
           "Accept": "application/json"
         },
         body: JSON.stringify(req.body),
@@ -119,4 +119,3 @@ export default async function handler(req, res) {
     });
   }
 }
-
