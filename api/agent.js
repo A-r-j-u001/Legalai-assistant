@@ -46,8 +46,42 @@ export default async function handler(req, res) {
       });
     }
 
+<<<<<<< HEAD
     // Step 1: Get OAuth token with improved error handling
     console.log('🔑 Attempting to get OAuth token...');
+=======
+    // Step 1: Get OAuth token first
+    console.log('Getting OAuth token...');
+    
+    const tokenResponse = await fetch('https://portal.qraptor.ai/auth1/realms/appzkcrk3gkfiqe8/protocol/openid-connect/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        'grant_type': 'password',
+        'client_id': 'public',
+        'username': username,
+        'password': password
+      })
+    });
+
+    if (!tokenResponse.ok) {
+      const tokenError = await tokenResponse.text();
+      console.error('Token error:', tokenError);
+      return res.status(401).json({
+        error: 'Authentication failed',
+        details: tokenError
+      });
+    }
+
+    const tokenData = await tokenResponse.json();
+    const accessToken = tokenData.access_token;
+    console.log('✅ Token obtained');
+
+    // Step 2: Use token for agent call
+    console.log('Calling QRaptor API with token...');
+>>>>>>> 00b08d004993ef1052cde2b0267e4ccb16de0cc5
     
     const tokenRequestBody = new URLSearchParams({
       'grant_type': 'password',
@@ -128,9 +162,13 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+<<<<<<< HEAD
         'Authorization': `Bearer ${accessToken}`,
         'Accept': 'application/json',
         'User-Agent': 'LegalAI-Assistant/1.0'
+=======
+        'Authorization': `Bearer ${accessToken}`
+>>>>>>> 00b08d004993ef1052cde2b0267e4ccb16de0cc5
       },
       body: JSON.stringify(agentRequestBody)
     });
