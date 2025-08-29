@@ -113,6 +113,35 @@ export default async function handler(req, res) {
 
     console.log("Making request to QRaptor API with fresh token...");
 
+    // 🔹 ENHANCED: Build request with conversation context
+    let requestBody = { ...req.body };
+    
+    // If chat history is provided, build a contextual message
+    if (req.body.chat_history && Array.isArray(req.body.chat_history) && req.body.chat_history.length > 0) {
+      console.log("📝 Building message with conversation context...");
+      
+      // Get recent history (last 10 messages to avoid token limits)
+      const recentHistory = req.body.chat_history.slice(-10);
+      
+      // Build conversation context
+      const conversationContext = recentHistory
+        .map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)
+        .join('\n\n');
+      
+      // Create contextual message
+      const contextualMessage = `Previous conversation context:
+${conversationContext}
+
+Current user question: ${req.body.user_message}
+
+Please respond to the current question while considering the previous conversation context. Provide a helpful and relevant response that builds upon our previous discussion.`;
+
+      requestBody.user_message = contextualMessage;
+      console.log("📋 Built contextual message:", contextualMessage.substring(0, 300) + "...");
+    } else {
+      console.log("🆕 No chat history provided, treating as fresh conversation");
+    }
+
     // Make the API request with the access token
     const response = await fetch(AUTH_CONFIG.api_url, {
       method: "POST",
@@ -121,7 +150,7 @@ export default async function handler(req, res) {
         "Authorization": `Bearer ${accessToken}`,
         "Accept": "application/json"
       },
-      body: JSON.stringify(req.body),
+      body: JSON.stringify(requestBody),
     });
 
     console.log("QRaptor API Response Status:", response.status);
@@ -151,7 +180,7 @@ export default async function handler(req, res) {
             "Authorization": `Bearer ${accessToken}`,
             "Accept": "application/json"
           },
-          body: JSON.stringify(req.body),
+          body: JSON.stringify(requestBody),
         });
 
         const retryResponseText = await retryResponse.text();
