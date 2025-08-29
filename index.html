@@ -236,49 +236,6 @@
             background-color: #ef4444;
         }
 
-        /* Theme Toggle Button */
-        .theme-toggle {
-            position: relative;
-            width: 60px;
-            height: 30px;
-            background: #e2e8f0;
-            border-radius: 15px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-            border: none;
-            outline: none;
-        }
-
-        .theme-toggle.dark {
-            background: #475569;
-        }
-
-        .theme-toggle-circle {
-            position: absolute;
-            top: 3px;
-            left: 3px;
-            width: 24px;
-            height: 24px;
-            background: white;
-            border-radius: 50%;
-            transition: transform 0.3s ease, background-color 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-
-        .theme-toggle.dark .theme-toggle-circle {
-            transform: translateX(30px);
-            background: #1e293b;
-            color: #fbbf24;
-        }
-
-        .theme-toggle:not(.dark) .theme-toggle-circle {
-            color: #f59e0b;
-        }
-
         /* Mobile input adjustments */
         @media (max-width: 640px) {
             .message-input-container {
@@ -297,70 +254,6 @@
             .message {
                 max-width: calc(100vw - 80px);
             }
-        }
-
-        /* Dark Mode Styles */
-        .dark {
-            color-scheme: dark;
-        }
-
-        .dark .bg-gray-50 {
-            background-color: #0f172a !important;
-        }
-
-        .dark .bg-white {
-            background-color: #1e293b !important;
-        }
-
-        .dark .text-gray-900 {
-            color: #f8fafc !important;
-        }
-
-        .dark .text-gray-600 {
-            color: #cbd5e1 !important;
-        }
-
-        .dark .text-gray-500 {
-            color: #94a3b8 !important;
-        }
-
-        .dark .text-gray-700 {
-            color: #e2e8f0 !important;
-        }
-
-        .dark .border-gray-200 {
-            border-color: #334155 !important;
-        }
-
-        .dark .border-gray-300 {
-            border-color: #475569 !important;
-        }
-
-        .dark .hover\:bg-gray-100:hover {
-            background-color: #334155 !important;
-        }
-
-        .dark .bg-blue-50 {
-            background-color: #1e3a8a !important;
-        }
-
-        .dark .text-blue-700 {
-            color: #93c5fd !important;
-        }
-
-        .dark .border-blue-600 {
-            border-color: #2563eb !important;
-        }
-
-        .dark .qraptor-brand {
-            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-            color: #94a3b8;
-            border-color: #334155;
-        }
-
-        .dark .qraptor-brand:hover {
-            background: linear-gradient(135deg, #334155 0%, #475569 100%);
-            color: #cbd5e1;
         }
 
         /* Mobile hamburger menu */
@@ -391,6 +284,16 @@
         @keyframes fadeInOut {
             0%, 100% { opacity: 0; }
             50% { opacity: 1; }
+        }
+
+        /* Fixed disclaimer styling */
+        .disclaimer {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 8px;
+            font-style: italic;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 8px;
         }
     </style>
 </head>
@@ -532,12 +435,6 @@
                     </div>
                     
                     <div class="flex items-center space-x-3">
-                        <!-- Theme Toggle -->
-                        <button id="themeToggle" class="theme-toggle" title="Toggle Dark/Light Mode">
-                            <div class="theme-toggle-circle">
-                                <i class="fas fa-sun"></i>
-                            </div>
-                        </button>
                         <span id="apiStatus" class="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">
                             <i class="fas fa-sync-alt animate-spin mr-1"></i>
                             Initializing
@@ -617,12 +514,11 @@
     </div>
 
     <script>
-        // Global variables
+        // Global variables - REMOVED THEME VARIABLES
         let sidebarCollapsed = false;
         let chatHistory = [];
-        let isDarkMode = false;
 
-        // DOM elements
+        // DOM elements - REMOVED THEME TOGGLE
         const sidebar = document.getElementById('sidebar');
         const toggleBtn = document.getElementById('toggleBtn');
         const messageInput = document.getElementById('messageInput');
@@ -634,44 +530,16 @@
         const connectionStatus = document.getElementById('connectionStatus');
         const statusText = document.getElementById('statusText');
         const apiStatus = document.getElementById('apiStatus');
-        const themeToggle = document.getElementById('themeToggle');
         const mobileMenuBtn = document.getElementById('mobileMenuBtn');
         const mobileOverlay = document.getElementById('mobileOverlay');
         const contextIndicator = document.getElementById('contextIndicator');
 
-        // Initialize app
+        // Initialize app - REMOVED THEME LOADING
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('welcomeTime').textContent = getCurrentTime();
-            loadThemePreference();
             updateConnectionStatus('connected', 'Connected to Legal Agent • Ready');
             updateAPIStatus('connected', 'Legal Agent Ready');
         });
-
-        // --- THEME ---
-        function loadThemePreference() {
-            const savedTheme = 'light'; // Remove localStorage for now
-            isDarkMode = savedTheme === 'dark';
-            applyTheme();
-        }
-
-        function applyTheme() {
-            const body = document.body;
-            const toggleCircle = themeToggle.querySelector('.theme-toggle-circle i');
-            if (isDarkMode) {
-                body.classList.add('dark');
-                themeToggle.classList.add('dark');
-                toggleCircle.className = 'fas fa-moon';
-            } else {
-                body.classList.remove('dark');
-                themeToggle.classList.remove('dark');
-                toggleCircle.className = 'fas fa-sun';
-            }
-        }
-
-        function toggleTheme() {
-            isDarkMode = !isDarkMode;
-            applyTheme();
-        }
 
         // --- MOBILE MENU ---
         function toggleMobileMenu() {
@@ -724,6 +592,16 @@
                 const bgClass = isError ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200';
                 const iconBg = isError ? 'from-red-500 to-red-600' : 'from-blue-600 to-purple-600';
                 const icon = isError ? 'fa-exclamation-triangle' : 'fa-balance-scale';
+                
+                // FIXED DISCLAIMER HANDLING - Use proper HTML instead of escaped HTML
+                let messageContent = escapeHtml(content);
+                let disclaimerHTML = '';
+                
+                // Check if message should have disclaimer and doesn't already have one
+                if (!isError && !content.includes('Disclaimer') && !content.includes('legal advice') && !content.includes('educational purposes')) {
+                    disclaimerHTML = '<div class="disclaimer">Disclaimer: For educational purposes only. Consult a qualified lawyer for legal advice.</div>';
+                }
+                
                 messageDiv.innerHTML = `
                     <div class="flex justify-start">
                         <div class="max-w-xs md:max-w-2xl lg:max-w-3xl ${bgClass} rounded-2xl px-4 md:px-6 py-3 md:py-4 shadow-sm border">
@@ -732,8 +610,9 @@
                                     <i class="fas ${icon} text-white text-xs md:text-sm"></i>
                                 </div>
                                 <div class="flex-1 min-w-0">
-                                    <div class="text-gray-900 mb-2 whitespace-pre-wrap leading-relaxed text-sm md:text-base break-words">${escapeHtml(content)}</div>
-                                    <p class="text-xs text-gray-500">${getCurrentTime()}</p>
+                                    <div class="text-gray-900 mb-2 whitespace-pre-wrap leading-relaxed text-sm md:text-base break-words">${messageContent}</div>
+                                    ${disclaimerHTML}
+                                    <p class="text-xs text-gray-500 mt-2">${getCurrentTime()}</p>
                                 </div>
                             </div>
                         </div>
@@ -743,7 +622,7 @@
             messagesContainer.appendChild(messageDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
             
-            // 🔹 FIXED: Store both user and assistant messages in chat history
+            // Store both user and assistant messages in chat history
             chatHistory.push({
                 role: type === 'user' ? 'user' : 'assistant', 
                 content: content, 
@@ -787,7 +666,7 @@
             }
         }
 
-        // 🔹 IMPROVED AI RESPONSE EXTRACTION FUNCTION
+        // IMPROVED AI RESPONSE EXTRACTION FUNCTION
         function extractAIResponse(data) {
             console.log("🔍 Extracting AI response from data:", data);
             
@@ -877,7 +756,7 @@
             return aiResponse;
         }
 
-        // 🔹 ENHANCED SEND MESSAGE FUNCTION WITH CONVERSATION CONTEXT
+        // ENHANCED SEND MESSAGE FUNCTION WITH CONVERSATION CONTEXT
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (!message) return;
@@ -890,13 +769,13 @@
             showTyping();
             updateAPIStatus('processing','Legal Agent Processing...');
 
-            // 🔹 Show context indicator if we have chat history
+            // Show context indicator if we have chat history
             if (chatHistory.length > 1) { // More than just the current user message
                 showContextIndicator();
             }
 
             try {
-                // 🔹 ENHANCED: Build request data with conversation context
+                // Build request data with conversation context
                 const requestData = {
                     user_message: message,
                     chat_history: chatHistory.slice(0, -1) // Send all history except current message
@@ -950,7 +829,7 @@
 
                 console.log("✅ Successful API Response:", data);
 
-                // 🔹 USE THE IMPROVED EXTRACTION FUNCTION
+                // USE THE IMPROVED EXTRACTION FUNCTION
                 let aiResponse = extractAIResponse(data);
 
                 // Final fallback if no response found
@@ -967,11 +846,7 @@
                     }
                 }
 
-                // Add legal disclaimer if not already present (smaller text)
-                if (aiResponse && !aiResponse.includes('Disclaimer') && !aiResponse.includes('legal advice') && !aiResponse.includes('educational purposes')) {
-                    aiResponse += "\n\n<small><em>Disclaimer: For educational purposes only. Consult a qualified lawyer for legal advice.</em></small>";
-                }
-
+                // REMOVED DISCLAIMER ADDITION HERE - Now handled in addMessage function
                 console.log("📤 Displaying response to user:", aiResponse.substring(0, 200) + "...");
                 addMessage(aiResponse, 'assistant');
                 updateAPIStatus('connected', 'Legal Agent Ready');
@@ -999,7 +874,7 @@
             updateSendButton();
         });
 
-        // 🔹 ENHANCED: Clear chat history when starting new chat
+        // Clear chat history when starting new chat
         function startNewChat() {
             console.log("🔄 Starting new chat - clearing history");
             chatHistory = [];
@@ -1025,7 +900,7 @@
             closeMobileMenu();
         }
 
-        // --- EVENT LISTENERS ---
+        // --- EVENT LISTENERS --- (REMOVED THEME TOGGLE LISTENERS)
         toggleBtn.addEventListener('click',()=>{ 
             sidebarCollapsed=!sidebarCollapsed; 
             sidebar.classList.toggle('collapsed',sidebarCollapsed); 
@@ -1036,7 +911,6 @@
             sidebar.classList.toggle('collapsed',sidebarCollapsed); 
         });
         
-        themeToggle.addEventListener('click', toggleTheme);
         mobileMenuBtn.addEventListener('click', toggleMobileMenu);
         mobileOverlay.addEventListener('click', closeMobileMenu);
         
@@ -1049,7 +923,7 @@
         
         sendBtn.addEventListener('click',sendMessage);
         
-        // 🔹 ENHANCED: Use new chat function that clears history
+        // Use new chat function that clears history
         newChatBtn.addEventListener('click', startNewChat);
 
         // Close mobile menu on window resize
