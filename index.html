@@ -91,6 +91,7 @@
         .sidebar.collapsed .sidebar-content {
             opacity: 0;
             pointer-events: none;
+            display: none;
         }
 
         .sidebar.collapsed .icon-only {
@@ -159,6 +160,13 @@
             margin: 0 auto 8px auto !important;
             border-radius: 12px;
             padding: 0 !important;
+        }
+        /* Reduce padding and center container for New Chat section when collapsed */
+        .sidebar.collapsed > .p-4:nth-of-type(2) {
+            padding-left: 8px;
+            padding-right: 8px;
+            display: flex;
+            justify-content: center;
         }
         /* Center the settings button at bottom when collapsed */
         .sidebar.collapsed .p-4:last-child button {
