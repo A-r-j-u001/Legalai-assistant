@@ -71,6 +71,18 @@
             }
         }
 
+        /* Ensure perfect centering for collapsed sidebar items */
+        .sidebar.collapsed nav ul {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .sidebar.collapsed nav li {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+
         .sidebar-content {
             opacity: 1;
             transition: opacity 0.2s ease-in-out;
@@ -94,12 +106,12 @@
         .sidebar.collapsed .nav-btn {
             justify-content: center;
             align-items: center;
-            padding: 12px;
             width: 48px;
             height: 48px;
             margin: 0 auto 8px auto;
             border-radius: 12px;
             display: flex;
+            padding: 0;
             border-left-width: 0;
             text-align: center;
         }
@@ -110,7 +122,11 @@
 
         .sidebar.collapsed .nav-btn i {
             font-size: 16px;
-            display: block;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
             line-height: 1;
             margin: 0;
         }
@@ -126,6 +142,7 @@
             flex-direction: column;
             align-items: center;
             gap: 0;
+            justify-content: center;
         }
 
         .sidebar.collapsed .p-4:last-child .w-10 {
@@ -140,6 +157,16 @@
             width: 48px;
             height: 48px;
             margin: 0 auto 8px auto;
+            border-radius: 12px;
+        }
+        /* Center the settings button at bottom when collapsed */
+        .sidebar.collapsed .p-4:last-child button {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 48px;
+            height: 48px;
+            margin: 8px auto 0;
             border-radius: 12px;
         }
 
