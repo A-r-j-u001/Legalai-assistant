@@ -298,9 +298,9 @@ async function sendMessage() {
             }
         }
 
-        // Add legal disclaimer if not already present
+        // Add legal disclaimer if not already present (smaller text)
         if (aiResponse && !aiResponse.includes('Disclaimer') && !aiResponse.includes('legal advice') && !aiResponse.includes('educational purposes')) {
-            aiResponse += "\n\n**Legal Disclaimer:** This information is for educational purposes only and does not constitute legal advice. Please consult a qualified lawyer for specific legal matters.";
+            aiResponse += "\n\n<small><em>Disclaimer: For educational purposes only. Consult a qualified lawyer for legal advice.</em></small>";
         }
 
         console.log("📤 Displaying response to user:", aiResponse.substring(0, 200) + "...");
