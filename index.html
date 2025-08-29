@@ -373,16 +373,40 @@
                 display: flex;
             }
         }
+
+        /* Context indicator */
+        .context-indicator {
+            position: fixed;
+            bottom: 100px;
+            right: 20px;
+            background: rgba(59, 130, 246, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            z-index: 1000;
+            animation: fadeInOut 2s ease-in-out;
+        }
+
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
     </style>
 </head>
 <body class="bg-gray-50 font-sans">
     <!-- Mobile Overlay -->
     <div id="mobileOverlay" class="mobile-overlay"></div>
     
+    <!-- Context Indicator (shows when context is being used) -->
+    <div id="contextIndicator" class="context-indicator hidden">
+        <i class="fas fa-history mr-1"></i>
+        Using conversation context
+    </div>
+    
     <div class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
         <div id="sidebar" class="sidebar bg-white border-r border-gray-200 flex flex-col relative">
-            
             
             <!-- Header -->
             <div class="p-4 border-b border-gray-200 flex items-center justify-center">
@@ -613,6 +637,7 @@
         const themeToggle = document.getElementById('themeToggle');
         const mobileMenuBtn = document.getElementById('mobileMenuBtn');
         const mobileOverlay = document.getElementById('mobileOverlay');
+        const contextIndicator = document.getElementById('contextIndicator');
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
@@ -624,7 +649,7 @@
 
         // --- THEME ---
         function loadThemePreference() {
-            const savedTheme = localStorage.getItem('theme') || 'light';
+            const savedTheme = 'light'; // Remove localStorage for now
             isDarkMode = savedTheme === 'dark';
             applyTheme();
         }
@@ -636,12 +661,10 @@
                 body.classList.add('dark');
                 themeToggle.classList.add('dark');
                 toggleCircle.className = 'fas fa-moon';
-                localStorage.setItem('theme', 'dark');
             } else {
                 body.classList.remove('dark');
                 themeToggle.classList.remove('dark');
                 toggleCircle.className = 'fas fa-sun';
-                localStorage.setItem('theme', 'light');
             }
         }
 
@@ -684,15 +707,16 @@
             return new Date().toLocaleTimeString('hi-IN',{hour:'2-digit',minute:'2-digit',hour12:true});
         }
 
-        // --- CHAT ---
+        // --- CHAT FUNCTIONS ---
         function addMessage(content, type, isError=false) {
             const messageDiv = document.createElement('div');
             messageDiv.className = 'message';
+            
             if (type === 'user') {
                 messageDiv.innerHTML = `
                     <div class="flex justify-end">
                         <div class="max-w-xs md:max-w-md bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl px-4 md:px-6 py-3 md:py-4 shadow-lg">
-                            <p class="mb-2 text-sm md:text-base break-words">${content}</p>
+                            <p class="mb-2 text-sm md:text-base break-words">${escapeHtml(content)}</p>
                             <p class="text-xs text-blue-100 text-right">${getCurrentTime()}</p>
                         </div>
                     </div>`;
@@ -708,25 +732,49 @@
                                     <i class="fas ${icon} text-white text-xs md:text-sm"></i>
                                 </div>
                                 <div class="flex-1 min-w-0">
-                                    <div class="text-gray-900 mb-2 whitespace-pre-wrap leading-relaxed text-sm md:text-base break-words">${content}</div>
+                                    <div class="text-gray-900 mb-2 whitespace-pre-wrap leading-relaxed text-sm md:text-base break-words">${escapeHtml(content)}</div>
                                     <p class="text-xs text-gray-500">${getCurrentTime()}</p>
                                 </div>
                             </div>
                         </div>
                     </div>`;
             }
+            
             messagesContainer.appendChild(messageDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
-            chatHistory.push({role: type==='user'?'user':'assistant', content, timestamp:getCurrentTime()});
+            
+            // 🔹 FIXED: Store both user and assistant messages in chat history
+            chatHistory.push({
+                role: type === 'user' ? 'user' : 'assistant', 
+                content: content, 
+                timestamp: getCurrentTime()
+            });
+            
+            console.log(`💬 Added ${type} message to history. Total messages: ${chatHistory.length}`);
         }
 
-        function buildMemoryString() {
-            const recentHistory = chatHistory.slice(-10);
-            return recentHistory.map(msg => `${msg.role}: ${msg.content}`).join('\n');
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
-        function showTyping(){ typingIndicator.classList.remove('hidden'); chatContainer.scrollTop=chatContainer.scrollHeight;}
-        function hideTyping(){ typingIndicator.classList.add('hidden'); }
+        function showContextIndicator() {
+            contextIndicator.classList.remove('hidden');
+            setTimeout(() => {
+                contextIndicator.classList.add('hidden');
+            }, 2000);
+        }
+
+        function showTyping() { 
+            typingIndicator.classList.remove('hidden'); 
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        function hideTyping() { 
+            typingIndicator.classList.add('hidden'); 
+        }
 
         function updateSendButton() {
             const hasText = messageInput.value.trim().length > 0;
@@ -829,7 +877,7 @@
             return aiResponse;
         }
 
-        // --- SEND MESSAGE FUNCTION (KEEPING API CALLS UNCHANGED) ---
+        // 🔹 ENHANCED SEND MESSAGE FUNCTION WITH CONVERSATION CONTEXT
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (!message) return;
@@ -842,12 +890,22 @@
             showTyping();
             updateAPIStatus('processing','Legal Agent Processing...');
 
+            // 🔹 Show context indicator if we have chat history
+            if (chatHistory.length > 1) { // More than just the current user message
+                showContextIndicator();
+            }
+
             try {
+                // 🔹 ENHANCED: Build request data with conversation context
                 const requestData = {
-                    user_message: message
+                    user_message: message,
+                    chat_history: chatHistory.slice(0, -1) // Send all history except current message
                 };
 
-                console.log('Sending request:', requestData);
+                console.log('🚀 Sending request with context:', {
+                    user_message: message,
+                    chat_history_length: requestData.chat_history.length
+                });
 
                 const response = await fetch("/api/agent", {
                     method: "POST",
@@ -892,7 +950,7 @@
 
                 console.log("✅ Successful API Response:", data);
 
-                // 🔹 USE THE NEW IMPROVED EXTRACTION FUNCTION
+                // 🔹 USE THE IMPROVED EXTRACTION FUNCTION
                 let aiResponse = extractAIResponse(data);
 
                 // Final fallback if no response found
@@ -941,15 +999,58 @@
             updateSendButton();
         });
 
-        // --- EVENTS ---
-        toggleBtn.addEventListener('click',()=>{ sidebarCollapsed=!sidebarCollapsed; sidebar.classList.toggle('collapsed',sidebarCollapsed); });
-        document.getElementById('toggleBtnIcon').addEventListener('click',()=>{ sidebarCollapsed=!sidebarCollapsed; sidebar.classList.toggle('collapsed',sidebarCollapsed); });
+        // 🔹 ENHANCED: Clear chat history when starting new chat
+        function startNewChat() {
+            console.log("🔄 Starting new chat - clearing history");
+            chatHistory = [];
+            messagesContainer.innerHTML = "";
+            
+            // Add welcome message back
+            const welcomeDiv = document.createElement('div');
+            welcomeDiv.innerHTML = `
+                <div class="flex justify-start">
+                    <div class="max-w-xs md:max-w-md bg-white rounded-2xl px-4 md:px-6 py-3 md:py-4 shadow-sm border border-gray-200 message">
+                        <div class="flex items-start space-x-3">
+                            <div class="w-6 h-6 md:w-8 md:h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-robot text-white text-xs md:text-sm"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-gray-900 mb-2 text-sm md:text-base">Hello! I'm your Legal AI Assistant powered by QRaptor. How can I help you with your legal queries today?</p>
+                                <p class="text-xs text-gray-500">${getCurrentTime()}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            messagesContainer.appendChild(welcomeDiv);
+            closeMobileMenu();
+        }
+
+        // --- EVENT LISTENERS ---
+        toggleBtn.addEventListener('click',()=>{ 
+            sidebarCollapsed=!sidebarCollapsed; 
+            sidebar.classList.toggle('collapsed',sidebarCollapsed); 
+        });
+        
+        document.getElementById('toggleBtnIcon').addEventListener('click',()=>{ 
+            sidebarCollapsed=!sidebarCollapsed; 
+            sidebar.classList.toggle('collapsed',sidebarCollapsed); 
+        });
+        
         themeToggle.addEventListener('click', toggleTheme);
         mobileMenuBtn.addEventListener('click', toggleMobileMenu);
         mobileOverlay.addEventListener('click', closeMobileMenu);
-        messageInput.addEventListener('keydown',function(e){ if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); if(!sendBtn.disabled) sendMessage(); }});
+        
+        messageInput.addEventListener('keydown',function(e){ 
+            if(e.key==="Enter" && !e.shiftKey){ 
+                e.preventDefault(); 
+                if(!sendBtn.disabled) sendMessage(); 
+            }
+        });
+        
         sendBtn.addEventListener('click',sendMessage);
-        newChatBtn.addEventListener('click',()=>{ chatHistory=[]; messagesContainer.innerHTML=""; closeMobileMenu(); });
+        
+        // 🔹 ENHANCED: Use new chat function that clears history
+        newChatBtn.addEventListener('click', startNewChat);
 
         // Close mobile menu on window resize
         window.addEventListener('resize', function() {
