@@ -129,7 +129,97 @@ function updateSendButton() {
     }
 }
 
-// --- IMPROVED SEND MESSAGE FUNCTION ---
+// 🔹 IMPROVED AI RESPONSE EXTRACTION FUNCTION
+function extractAIResponse(data) {
+    console.log("🔍 Extracting AI response from data:", data);
+    
+    let aiResponse = "";
+    
+    // Priority 1: Check outputs object first (based on logs)
+    if (data.outputs) {
+        console.log("📦 Found outputs object:", data.outputs);
+        const outputs = data.outputs;
+        
+        // Check for legal_reply first (this seems to be the main response field)
+        if (outputs.legal_reply && outputs.legal_reply !== null && outputs.legal_reply.trim()) {
+            aiResponse = outputs.legal_reply;
+            console.log("✅ Found legal_reply:", aiResponse.substring(0, 100) + "...");
+        }
+        // Check for general_reply as backup
+        else if (outputs.general_reply && outputs.general_reply !== null && outputs.general_reply.trim()) {
+            aiResponse = outputs.general_reply;
+            console.log("✅ Found general_reply:", aiResponse.substring(0, 100) + "...");
+        }
+        // Check other possible response fields in outputs
+        else if (outputs.response && outputs.response !== null && outputs.response.trim()) {
+            aiResponse = outputs.response;
+            console.log("✅ Found outputs.response:", aiResponse.substring(0, 100) + "...");
+        }
+        else if (outputs.message && outputs.message !== null && outputs.message.trim()) {
+            aiResponse = outputs.message;
+            console.log("✅ Found outputs.message:", aiResponse.substring(0, 100) + "...");
+        }
+        else {
+            console.log("⚠️ No valid response found in outputs. Available fields:", Object.keys(outputs));
+        }
+    }
+    
+    // Priority 2: Check direct response fields if outputs didn't have what we need
+    if (!aiResponse) {
+        if (data.response && data.response.trim()) {
+            aiResponse = data.response;
+            console.log("✅ Found direct response:", aiResponse.substring(0, 100) + "...");
+        }
+        else if (data.message && data.message.trim()) {
+            aiResponse = data.message;
+            console.log("✅ Found direct message:", aiResponse.substring(0, 100) + "...");
+        }
+        else if (data.legal_reply && data.legal_reply.trim()) {
+            aiResponse = data.legal_reply;
+            console.log("✅ Found direct legal_reply:", aiResponse.substring(0, 100) + "...");
+        }
+        else if (data.general_reply && data.general_reply.trim()) {
+            aiResponse = data.general_reply;
+            console.log("✅ Found direct general_reply:", aiResponse.substring(0, 100) + "...");
+        }
+    }
+    
+    // Priority 3: Check for system message data
+    if (!aiResponse && data.system_message && data.system_message.data) {
+        aiResponse = data.system_message.data
+            .replace(/\r\n/g, '\n')
+            .replace(/None/g, '')
+            .replace(/False/g, '')
+            .replace(/True/g, '')
+            .trim();
+        console.log("✅ Found system_message.data:", aiResponse.substring(0, 100) + "...");
+    }
+    
+    // Priority 4: Check raw_response
+    if (!aiResponse && data.raw_response) {
+        aiResponse = data.raw_response;
+        console.log("✅ Found raw_response:", aiResponse.substring(0, 100) + "...");
+    }
+    
+    // Clean up the response if found
+    if (aiResponse && typeof aiResponse === 'string') {
+        aiResponse = aiResponse.trim();
+        
+        // Remove common API artifacts and clean up formatting
+        aiResponse = aiResponse
+            .replace(/^["']|["']$/g, '') // Remove quotes at start/end
+            .replace(/\\n/g, '\n') // Convert escaped newlines
+            .replace(/\\"/g, '"') // Convert escaped quotes
+            .replace(/\\r/g, '') // Remove escaped carriage returns
+            .trim();
+            
+        console.log("🧹 Cleaned response:", aiResponse.substring(0, 100) + "...");
+    }
+    
+    return aiResponse;
+}
+
+// --- SEND MESSAGE FUNCTION (KEEPING API CALLS UNCHANGED) ---
 async function sendMessage() {
     const message = messageInput.value.trim();
     if (!message) return;
@@ -189,69 +279,31 @@ async function sendMessage() {
             return;
         }
 
-        console.log("Successful API Response:", data);
+        console.log("✅ Successful API Response:", data);
 
-        // Extract AI response from various possible response structures
-        let aiResponse = "";
-
-        // Check for direct response fields
-        if (data.response) {
-            aiResponse = data.response;
-        } else if (data.message) {
-            aiResponse = data.message;
-        } else if (data.legal_reply) {
-            aiResponse = data.legal_reply;
-        } else if (data.general_reply) {
-            aiResponse = data.general_reply;
-        }
-        // Check for nested outputs structure
-        else if (data.outputs) {
-            const outputs = data.outputs;
-            if (outputs.legal_reply) {
-                aiResponse = outputs.legal_reply;
-            } else if (outputs.general_reply) {
-                aiResponse = outputs.general_reply;
-            } else if (outputs.response) {
-                aiResponse = outputs.response;
-            }
-        }
-        // Check for raw response
-        else if (data.raw_response) {
-            aiResponse = data.raw_response;
-        }
-        // Check for system message data
-        else if (data.system_message && data.system_message.data) {
-            aiResponse = data.system_message.data
-                .replace(/\r\n/g, '\n')
-                .replace(/None/g, '')
-                .replace(/False/g, '')
-                .replace(/True/g, '')
-                .trim();
-        }
-
-        // Clean up the response
-        if (aiResponse) {
-            aiResponse = aiResponse.trim();
-            
-            // Remove common API artifacts
-            aiResponse = aiResponse
-                .replace(/^["']|["']$/g, '') // Remove quotes at start/end
-                .replace(/\\n/g, '\n') // Convert escaped newlines
-                .replace(/\\"/g, '"') // Convert escaped quotes
-                .trim();
-        }
+        // 🔹 USE THE NEW IMPROVED EXTRACTION FUNCTION
+        let aiResponse = extractAIResponse(data);
 
         // Final fallback if no response found
         if (!aiResponse) {
-            console.warn('No valid response found in data:', data);
-            aiResponse = "I apologize, but I couldn't generate a proper response to your legal query. Please try rephrasing your question or contact support if the issue persists.";
+            console.warn('❌ No valid response found in data:', data);
+            console.log("📋 Available data keys:", Object.keys(data));
+            
+            // Try to extract ANY text content as last resort
+            const dataStr = JSON.stringify(data);
+            if (dataStr.length > 100) {
+                aiResponse = "I received your message and processed it successfully, but I'm having trouble extracting the response. Please try asking your question again.";
+            } else {
+                aiResponse = "I apologize, but I couldn't generate a proper response to your legal query. Please try rephrasing your question or contact support if the issue persists.";
+            }
         }
 
-        // Add legal disclaimer
-        if (!aiResponse.includes('Disclaimer') && !aiResponse.includes('legal advice')) {
+        // Add legal disclaimer if not already present
+        if (aiResponse && !aiResponse.includes('Disclaimer') && !aiResponse.includes('legal advice') && !aiResponse.includes('educational purposes')) {
             aiResponse += "\n\n**Legal Disclaimer:** This information is for educational purposes only and does not constitute legal advice. Please consult a qualified lawyer for specific legal matters.";
         }
 
+        console.log("📤 Displaying response to user:", aiResponse.substring(0, 200) + "...");
         addMessage(aiResponse, 'assistant');
         updateAPIStatus('connected', 'Legal Agent Ready');
 
