@@ -154,10 +154,11 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            width: 48px;
-            height: 48px;
-            margin: 0 auto 8px auto;
+            width: 48px !important;
+            height: 48px !important;
+            margin: 0 auto 8px auto !important;
             border-radius: 12px;
+            padding: 0 !important;
         }
         /* Center the settings button at bottom when collapsed */
         .sidebar.collapsed .p-4:last-child button {
@@ -381,7 +382,7 @@
                     <span>New Chat</span>
                 </button>
                 <!-- Icon only version -->
-                <button class="icon-only w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white p-3 rounded-xl transition-all duration-200 hover-effect">
+                <button id="newChatIconBtn" class="icon-only w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white p-3 rounded-xl transition-all duration-200 hover-effect">
                     <i class="fas fa-plus"></i>
                 </button>
             </div>
@@ -570,6 +571,7 @@
         const chatContainer = document.getElementById('chatContainer');
         const typingIndicator = document.getElementById('typingIndicator');
         const newChatBtn = document.getElementById('newChatBtn');
+        const newChatIconBtn = document.getElementById('newChatIconBtn');
         const connectionStatus = document.getElementById('connectionStatus');
         const statusText = document.getElementById('statusText');
         const apiStatus = document.getElementById('apiStatus');
@@ -968,6 +970,7 @@
         
         // Use new chat function that clears history
         newChatBtn.addEventListener('click', startNewChat);
+        newChatIconBtn.addEventListener('click', startNewChat);
 
         // Close mobile menu on window resize
         window.addEventListener('resize', function() {
