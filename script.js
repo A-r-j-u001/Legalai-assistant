@@ -129,7 +129,7 @@ function updateSendButton() {
     }
 }
 
-// --- MAIN SEND - FIXED VERSION ---
+// --- IMPROVED SEND MESSAGE FUNCTION ---
 async function sendMessage() {
     const message = messageInput.value.trim();
     if (!message) return;
@@ -143,94 +143,131 @@ async function sendMessage() {
 
     try {
         const requestData = {
-            user_message: message,
-            memory: buildMemoryString(),
-            session_id: `session_${Date.now()}`,
-            timestamp: new Date().toISOString()
+            user_message: message
         };
 
-        // Call your Vercel proxy
+        console.log('Sending request:', requestData);
+
         const response = await fetch("/api/agent", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
             body: JSON.stringify(requestData)
         });
 
         hideTyping();
 
-        const text = await response.text();
-        let data; 
-        try { data = text ? JSON.parse(text) : {}; } catch { data = { raw:text }; }
+        console.log('Response status:', response.status);
+        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+        const responseText = await response.text();
+        console.log('Raw response text:', responseText);
+
+        let data;
+        try {
+            data = responseText ? JSON.parse(responseText) : {};
+        } catch (parseError) {
+            console.error('JSON parse error:', parseError);
+            data = { raw_response: responseText, parse_error: parseError.message };
+        }
 
         if (!response.ok) {
-            console.error("Agent Error Response:", data);
-            updateAPIStatus('error','Connection Error');
-            const details = typeof data === 'object' ? (data.details || data.error || JSON.stringify(data)) : String(data);
-            addMessage(`⚠️ Error ${response.status}. ${details || 'Request failed.'}`,'assistant',true);
+            console.error("API Error Response:", data);
+            updateAPIStatus('error', 'Connection Error');
+            
+            // Handle specific error cases
+            if (response.status === 401) {
+                addMessage(`🔐 **Authentication Error**\n\nThere seems to be an issue with the API credentials. Please check:\n- QRaptor username and password are correctly set\n- Account has proper permissions\n\nError details: ${data.details || data.error || 'Invalid credentials'}`, 'assistant', true);
+            } else if (response.status === 404) {
+                addMessage(`🔍 **Endpoint Not Found**\n\nThe API endpoint couldn't be found. This might be a configuration issue.\n\nError: ${data.details || data.error || 'Endpoint not found'}`, 'assistant', true);
+            } else {
+                const errorDetails = data.details || data.error || JSON.stringify(data) || 'Unknown error occurred';
+                addMessage(`⚠️ **Error ${response.status}**\n\n${errorDetails}`, 'assistant', true);
+            }
             return;
         }
 
-        console.log("Agent Response:", data);
+        console.log("Successful API Response:", data);
 
-        // 🔹 FIXED: Extract data from correct nested structure
+        // Extract AI response from various possible response structures
         let aiResponse = "";
-        let responseData = data;
 
-        // Check if response has outputs nested structure
-        if (data.outputs) {
-            responseData = data.outputs;
+        // Check for direct response fields
+        if (data.response) {
+            aiResponse = data.response;
+        } else if (data.message) {
+            aiResponse = data.message;
+        } else if (data.legal_reply) {
+            aiResponse = data.legal_reply;
+        } else if (data.general_reply) {
+            aiResponse = data.general_reply;
+        }
+        // Check for nested outputs structure
+        else if (data.outputs) {
+            const outputs = data.outputs;
+            if (outputs.legal_reply) {
+                aiResponse = outputs.legal_reply;
+            } else if (outputs.general_reply) {
+                aiResponse = outputs.general_reply;
+            } else if (outputs.response) {
+                aiResponse = outputs.response;
+            }
+        }
+        // Check for raw response
+        else if (data.raw_response) {
+            aiResponse = data.raw_response;
+        }
+        // Check for system message data
+        else if (data.system_message && data.system_message.data) {
+            aiResponse = data.system_message.data
+                .replace(/\r\n/g, '\n')
+                .replace(/None/g, '')
+                .replace(/False/g, '')
+                .replace(/True/g, '')
+                .trim();
         }
 
-        // Extract legal reply with proper checking
-        if (responseData.clarification_needed) {
-            aiResponse = "I need more information to provide accurate legal guidance. Could you please provide more details?";
-        } else {
-            // 🔹 FIXED: Check for legal_reply in the correct location
-            if (responseData.legal_reply && responseData.legal_reply.trim()) {
-                aiResponse += responseData.legal_reply.trim();
-            }
+        // Clean up the response
+        if (aiResponse) {
+            aiResponse = aiResponse.trim();
             
-            // Add general reply if available
-            if (responseData.general_reply && responseData.general_reply.trim()) {
-                aiResponse += (aiResponse ? "\n\n" : "") + responseData.general_reply.trim();
-            }
+            // Remove common API artifacts
+            aiResponse = aiResponse
+                .replace(/^["']|["']$/g, '') // Remove quotes at start/end
+                .replace(/\\n/g, '\n') // Convert escaped newlines
+                .replace(/\\"/g, '"') // Convert escaped quotes
+                .trim();
         }
 
-        // 🔹 FIXED: Handle empty response scenario
-        if (!aiResponse.trim()) {
-            // Check if there's a system_message with data
-            if (responseData.system_message && responseData.system_message.data) {
-                const systemData = responseData.system_message.data;
-                // Clean up the system data (remove None, False, etc.)
-                const cleanedData = systemData
-                    .replace(/\r\n/g, '\n')
-                    .replace(/None/g, '')
-                    .replace(/False/g, '')
-                    .replace(/True/g, '')
-                    .trim();
-                
-                if (cleanedData) {
-                    aiResponse = cleanedData;
-                }
-            }
+        // Final fallback if no response found
+        if (!aiResponse) {
+            console.warn('No valid response found in data:', data);
+            aiResponse = "I apologize, but I couldn't generate a proper response to your legal query. Please try rephrasing your question or contact support if the issue persists.";
         }
 
-        // Final fallback if still no response
-        if (!aiResponse.trim()) {
-            aiResponse = "I apologize, but I couldn't generate a proper response to your query. Please try rephrasing your question.";
+        // Add legal disclaimer
+        if (!aiResponse.includes('Disclaimer') && !aiResponse.includes('legal advice')) {
+            aiResponse += "\n\n**Legal Disclaimer:** This information is for educational purposes only and does not constitute legal advice. Please consult a qualified lawyer for specific legal matters.";
         }
 
-        // Add disclaimer
-        aiResponse += "\n\n**Disclaimer:** This information is for educational purposes only and does not constitute legal advice. Please consult a qualified lawyer for legal matters.";
+        addMessage(aiResponse, 'assistant');
+        updateAPIStatus('connected', 'Legal Agent Ready');
 
-        addMessage(aiResponse,'assistant');
-        updateAPIStatus('connected','Legal Agent Ready');
-
-    } catch (err) {
+    } catch (networkError) {
         hideTyping();
-        console.error("Agent Error:", err);
-        updateAPIStatus('error','Connection Error');
-        addMessage("⚠️ There was an error connecting to the Legal Agent. Please try again.",'assistant',true);
+        console.error("Network/Fetch Error:", networkError);
+        updateAPIStatus('error', 'Connection Failed');
+        
+        let errorMessage = "🌐 **Connection Error**\n\n";
+        if (networkError.name === 'TypeError' && networkError.message.includes('fetch')) {
+            errorMessage += "Unable to connect to the Legal Agent API. Please check:\n- Your internet connection\n- API server status\n- Firewall settings";
+        } else {
+            errorMessage += `Network error: ${networkError.message}`;
+        }
+        
+        addMessage(errorMessage, 'assistant', true);
     }
 }
 
