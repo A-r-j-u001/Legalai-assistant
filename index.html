@@ -93,13 +93,15 @@
 
         .sidebar.collapsed .nav-btn {
             justify-content: center;
+            align-items: center;
             padding: 12px;
             width: 48px;
             height: 48px;
             margin: 0 auto 8px auto;
             border-radius: 12px;
             display: flex;
-            align-items: center;
+            border-left-width: 0;
+            text-align: center;
         }
 
         .sidebar.collapsed .nav-btn span {
@@ -108,6 +110,9 @@
 
         .sidebar.collapsed .nav-btn i {
             font-size: 16px;
+            display: block;
+            line-height: 1;
+            margin: 0;
         }
 
         /* Fix for collapsed sidebar user section */
@@ -125,6 +130,17 @@
 
         .sidebar.collapsed .p-4:last-child .w-10 {
             margin-bottom: 8px;
+        }
+
+        /* Ensure New Chat icon-only button centers in collapsed state */
+        .sidebar.collapsed .p-4 .icon-only {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 8px auto;
+            border-radius: 12px;
         }
 
         /* Animations */
