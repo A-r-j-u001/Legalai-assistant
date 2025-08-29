@@ -1,227 +1,153 @@
-// api/agent.js - IMPROVED VERSION WITH BETTER ERROR HANDLING
+// api/agent.js
+
 export default async function handler(req, res) {
-  // CORS headers
+  // Add CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-QRAPTOR-TOKEN');
 
+  // Handle preflight OPTIONS request
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    res.status(200).end();
+    return;
   }
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ 
-      error: 'Method not allowed',
-      details: 'Only POST requests are supported' 
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Only POST requests are allowed" });
+  }
+
+  // 🔹 FIXED: Properly use environment variable
+  const envToken = process.env.QRAPTOR_TOKEN;
+  const headerToken = req.headers['x-qraptor-token'];
+  const resolvedToken = envToken || (typeof headerToken === 'string' ? headerToken : Array.isArray(headerToken) ? headerToken[0] : undefined);
+
+  // Check if token exists
+  if (!resolvedToken) {
+    console.error("QRAPTOR_TOKEN not provided (env or X-QRAPTOR-TOKEN header)");
+    return res.status(500).json({ 
+      error: "Server configuration error", 
+      details: "QRAPTOR_TOKEN env var missing and no X-QRAPTOR-TOKEN header provided" 
     });
   }
 
   try {
-    console.log('🚀 Legal Agent API called');
-    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    console.log("Making request to QRaptor API...");
+    console.log("Token exists:", !!resolvedToken);
+    console.log("Token length:", resolvedToken?.length);
+    console.log("Request body:", JSON.stringify(req.body, null, 2));
 
-    const { user_message } = req.body;
-
-    if (!user_message || typeof user_message !== 'string' || user_message.trim() === '') {
-      return res.status(400).json({ 
-        error: 'Invalid request',
-        details: 'user_message is required and must be a non-empty string' 
-      });
-    }
-
-    // Check environment variables
-    const username = process.env.QRAPTOR_USERNAME;
-    const password = process.env.QRAPTOR_PASSWORD;
-
-    console.log('Environment check:', {
-      username: username ? `EXISTS (${username.length} chars)` : 'MISSING',
-      password: password ? `EXISTS (${password.length} chars)` : 'MISSING',
-      nodeEnv: process.env.NODE_ENV || 'not set'
-    });
-
-    if (!username || !password) {
-      return res.status(500).json({ 
-        error: 'Server configuration error',
-        details: 'QRaptor credentials not properly configured. Please contact administrator.'
-      });
-    }
-
-<<<<<<< HEAD
-    // Step 1: Get OAuth token with improved error handling
-    console.log('🔑 Attempting to get OAuth token...');
-=======
-    // Step 1: Get OAuth token first
-    console.log('Getting OAuth token...');
-    
-    const tokenResponse = await fetch('https://portal.qraptor.ai/auth1/realms/appzkcrk3gkfiqe8/protocol/openid-connect/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        'grant_type': 'password',
-        'client_id': 'public',
-        'username': username,
-        'password': password
-      })
-    });
-
-    if (!tokenResponse.ok) {
-      const tokenError = await tokenResponse.text();
-      console.error('Token error:', tokenError);
-      return res.status(401).json({
-        error: 'Authentication failed',
-        details: tokenError
-      });
-    }
-
-    const tokenData = await tokenResponse.json();
-    const accessToken = tokenData.access_token;
-    console.log('✅ Token obtained');
-
-    // Step 2: Use token for agent call
-    console.log('Calling QRaptor API with token...');
->>>>>>> 00b08d004993ef1052cde2b0267e4ccb16de0cc5
-    
-    const tokenRequestBody = new URLSearchParams({
-      'grant_type': 'password',
-      'client_id': 'public',
-      'username': username.trim(),
-      'password': password.trim()
-    });
-
-    console.log('Token request body:', tokenRequestBody.toString());
-
-    const tokenResponse = await fetch('https://portal.qraptor.ai/auth1/realms/appzkcrk3gkfiqe8/protocol/openid-connect/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Accept': 'application/json',
-        'User-Agent': 'LegalAI-Assistant/1.0'
-      },
-      body: tokenRequestBody
-    });
-
-    console.log('Token response status:', tokenResponse.status);
-    console.log('Token response headers:', Object.fromEntries(tokenResponse.headers.entries()));
-
-    const tokenResponseText = await tokenResponse.text();
-    console.log('Token response text:', tokenResponseText);
-
-    if (!tokenResponse.ok) {
-      console.error('❌ Token request failed:', tokenResponseText);
-      
-      let errorDetails;
-      try {
-        const tokenError = JSON.parse(tokenResponseText);
-        errorDetails = tokenError.error_description || tokenError.error || tokenResponseText;
-      } catch {
-        errorDetails = tokenResponseText;
+    // 🔹 FIXED: Properly use template literal with environment token
+    const response = await fetch(
+      "https://appzkcrk3gkfiqe8.qraptor.ai/api/390/agent-controller/trigger-agent",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${resolvedToken}`,  // ✅ Fixed template literal
+          "Accept": "application/json"
+        },
+        body: JSON.stringify(req.body),
       }
+    );
 
-      return res.status(401).json({
-        error: 'Authentication failed',
-        details: `Invalid client or invalid client credentials: ${errorDetails}`,
-        hint: 'Please verify your QRaptor username and password in the environment variables'
+    console.log("QRaptor API Response Status:", response.status);
+    console.log("QRaptor API Response Headers:", Object.fromEntries(response.headers.entries()));
+
+    // Get response text first to handle both JSON and SSE responses
+    const responseText = await response.text();
+    console.log("QRaptor API Raw Response:", responseText);
+
+    // If unauthorized, surface detailed context to client
+    if (response.status === 401 || response.status === 403) {
+      return res.status(response.status).json({
+        error: "Unauthorized to QRaptor API",
+        status: response.status,
+        details: responseText || "Invalid or expired token",
       });
     }
 
-    let tokenData;
+    // Check if response is ok
+    if (!response.ok) {
+      console.error("QRaptor API Error Response:", responseText);
+      return res.status(response.status).json({ 
+        error: "QRaptor API Error", 
+        status: response.status,
+        details: responseText,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+    }
+
+    // 🔹 FIXED: Handle SSE (Server-Sent Events) response format
+    let data;
     try {
-      tokenData = JSON.parse(tokenResponseText);
-    } catch (parseError) {
-      console.error('❌ Token response parse error:', parseError);
-      return res.status(500).json({
-        error: 'Authentication response error',
-        details: 'Unable to parse authentication response'
-      });
-    }
-
-    const accessToken = tokenData.access_token;
-    if (!accessToken) {
-      console.error('❌ No access token in response:', tokenData);
-      return res.status(500).json({
-        error: 'Authentication error',
-        details: 'No access token received from authentication server'
-      });
-    }
-
-    console.log('✅ OAuth token obtained successfully');
-
-    // Step 2: Call QRaptor agent with the token
-    console.log('🤖 Calling QRaptor Legal Agent...');
-    
-    const agentRequestBody = {
-      agent_name: 'Legal_agent',
-      user_message: user_message.trim()
-    };
-
-    console.log('Agent request body:', JSON.stringify(agentRequestBody, null, 2));
-
-    const qraptorResponse = await fetch('https://appzkcrk3gkfiqe8.qraptor.ai/api/390/agent-controller/trigger-agent', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-<<<<<<< HEAD
-        'Authorization': `Bearer ${accessToken}`,
-        'Accept': 'application/json',
-        'User-Agent': 'LegalAI-Assistant/1.0'
-=======
-        'Authorization': `Bearer ${accessToken}`
->>>>>>> 00b08d004993ef1052cde2b0267e4ccb16de0cc5
-      },
-      body: JSON.stringify(agentRequestBody)
-    });
-
-    console.log('QRaptor response status:', qraptorResponse.status);
-    console.log('QRaptor response headers:', Object.fromEntries(qraptorResponse.headers.entries()));
-
-    const qraptorResponseText = await qraptorResponse.text();
-    console.log('QRaptor response length:', qraptorResponseText.length);
-    console.log('QRaptor response preview:', qraptorResponseText.substring(0, 500));
-
-    if (!qraptorResponse.ok) {
-      console.error('❌ QRaptor API error:', qraptorResponseText);
-      
-      let errorDetails;
-      try {
-        const qraptorError = JSON.parse(qraptorResponseText);
-        errorDetails = qraptorError.message || qraptorError.error || qraptorResponseText;
-      } catch {
-        errorDetails = qraptorResponseText;
+      // Check if it's SSE format (contains "data:" lines)
+      if (responseText.includes('data: {')) {
+        console.log("Detected SSE format response");
+        
+        // Extract all data lines from SSE
+        const dataLines = responseText
+          .split('\n')
+          .filter(line => line.startsWith('data: {'))
+          .map(line => line.replace('data: ', ''));
+        
+        console.log("Extracted SSE data lines:", dataLines.length);
+        
+        // Find the final/complete response (with agentExecutionComplete: true)
+        let finalData = null;
+        for (const line of dataLines.reverse()) { // Start from last
+          try {
+            const parsed = JSON.parse(line);
+            if (parsed.agentExecutionComplete === true || parsed.outputs) {
+              finalData = parsed;
+              break;
+            }
+          } catch (e) {
+            console.log("Skipping unparseable line:", line.substring(0, 100));
+          }
+        }
+        
+        data = finalData || JSON.parse(dataLines[dataLines.length - 1]);
+        console.log("Final extracted data:", JSON.stringify(data, null, 2));
+        
+      } else {
+        // Regular JSON response
+        data = JSON.parse(responseText);
       }
-
-      return res.status(qraptorResponse.status).json({
-        error: 'Legal Agent Error',
-        status: qraptorResponse.status,
-        details: errorDetails
+    } catch (parseError) {
+      console.error("Failed to parse response:", parseError);
+      return res.status(500).json({
+        error: "Failed to parse QRaptor API response",
+        details: responseText.substring(0, 500) + "..."
       });
     }
 
-    // Parse the successful response
-    let responseData;
-    try {
-      responseData = JSON.parse(qraptorResponseText);
-      console.log('✅ QRaptor response parsed successfully');
-    } catch (parseError) {
-      console.log('⚠️ QRaptor response is not JSON, treating as text');
-      responseData = { 
-        raw_response: qraptorResponseText,
-        response_type: 'text'
-      };
-    }
-
-    console.log('Final response data:', JSON.stringify(responseData, null, 2));
+    console.log("QRaptor API Success Response:", JSON.stringify(data, null, 2));
     
-    return res.status(200).json(responseData);
+    return res.status(200).json(data);
 
   } catch (error) {
-    console.error('❌ Unexpected error in agent API:', error);
-    return res.status(500).json({
-      error: 'Internal server error',
+    console.error("Proxy Error:", error);
+    
+    // Handle different types of errors
+    if (error.name === 'AbortError') {
+      return res.status(408).json({ 
+        error: "Request timeout", 
+        details: "The request to QRaptor API timed out"
+      });
+    }
+    
+    if (error.cause?.code === 'ENOTFOUND') {
+      return res.status(503).json({ 
+        error: "DNS resolution failed", 
+        details: "Could not resolve QRaptor API hostname"
+      });
+    }
+    
+    return res.status(500).json({ 
+      error: "Proxy failed", 
       details: error.message,
-      type: error.name,
-      timestamp: new Date().toISOString()
+      errorType: error.name,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 }
