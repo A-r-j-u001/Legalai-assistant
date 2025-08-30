@@ -655,7 +655,12 @@
         const attachBtn = document.getElementById('attachBtn');
         const imageBadge = document.getElementById('imageBadge');
         const inputFloat = document.querySelector('.input-float');
+        const recentChatsList = document.getElementById('recentChats');
         let attachedImages = [];
+
+        // --- CHAT SESSIONS ---
+        let chatSessions = [];
+        let currentSessionId = null;
 
         // Initialize app (Guest mode)
         document.addEventListener('DOMContentLoaded', function() {
@@ -678,6 +683,14 @@
             document.getElementById('welcomeTime').textContent = getCurrentTime();
             updateConnectionStatus('connected', 'Connected to Legal Agent • Ready');
             updateAPIStatus('connected', 'Legal Agent Ready');
+
+            // Load sessions and open the latest
+            loadSessions();
+            if (chatSessions.length > 0) {
+                openSession(chatSessions[0].id);
+            } else {
+                createNewSession();
+            }
         });
 
         // --- MOBILE MENU ---
@@ -715,7 +728,7 @@
         }
 
         // --- CHAT FUNCTIONS ---
-        function addMessage(content, type, isError=false) {
+        function addMessage(content, type, isError=false, options={}) {
             const messageDiv = document.createElement('div');
             messageDiv.className = 'message';
             
@@ -760,15 +773,39 @@
             
             messagesContainer.appendChild(messageDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
-            
-            // Store both user and assistant messages in chat history
-            chatHistory.push({
-                role: type === 'user' ? 'user' : 'assistant', 
-                content: content, 
+
+            const msgObj = {
+                role: type === 'user' ? 'user' : 'assistant',
+                content: content,
                 timestamp: getCurrentTime()
-            });
-            
+            };
+
+            if (!options.skipStore) {
+                chatHistory.push(msgObj);
+                // Also persist to current session
+                if (currentSessionId) {
+                    const sessIdx = chatSessions.findIndex(s => s.id === currentSessionId);
+                    if (sessIdx !== -1) {
+                        const sess = chatSessions[sessIdx];
+                        sess.messages.push(msgObj);
+                        sess.updatedAt = Date.now();
+                        if (type === 'user' && (!sess.title || sess.title === 'New Chat')) {
+                            sess.title = deriveTitle(sess);
+                        }
+                        // Move session to top on new activity
+                        chatSessions.splice(sessIdx, 1);
+                        chatSessions.unshift(sess);
+                        saveSessions();
+                        renderRecentChats();
+                    }
+                } else {
+                    // If somehow missing, create session
+                    createNewSession();
+                }
+            }
+
             console.log(`💬 Added ${type} message to history. Total messages: ${chatHistory.length}`);
+            return msgObj;
         }
 
         // Escape HTML to prevent XSS
@@ -785,9 +822,98 @@
             }, 2000);
         }
 
-        function showTyping() { 
-            typingIndicator.classList.remove('hidden'); 
+        function showTyping() {
+            typingIndicator.classList.remove('hidden');
             chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // --- SESSIONS HELPERS ---
+        function saveSessions() {
+            try {
+                localStorage.setItem('chat_sessions', JSON.stringify(chatSessions));
+                localStorage.setItem('current_session_id', currentSessionId || '');
+            } catch (e) { console.error('Failed saving sessions', e); }
+        }
+
+        function loadSessions() {
+            try {
+                const raw = localStorage.getItem('chat_sessions');
+                chatSessions = raw ? JSON.parse(raw) : [];
+                currentSessionId = localStorage.getItem('current_session_id') || null;
+                renderRecentChats();
+            } catch (e) {
+                chatSessions = [];
+                currentSessionId = null;
+            }
+        }
+
+        function deriveTitle(session) {
+            const firstUser = (session.messages || []).find(m => m.role === 'user');
+            if (firstUser && firstUser.content) {
+                const t = firstUser.content.replace(/\s+/g,' ').trim();
+                return t.length > 42 ? t.slice(0, 42) + '…' : t;
+            }
+            return 'New Chat';
+        }
+
+        function renderRecentChats() {
+            if (!recentChatsList) return;
+            recentChatsList.innerHTML = '';
+            chatSessions.forEach(sess => {
+                const li = document.createElement('li');
+                const btn = document.createElement('button');
+                btn.className = `w-full text-left px-3 py-2 text-sm rounded-lg transition-all duration-200 truncate ${sess.id===currentSessionId ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600' : 'text-gray-700 hover:bg-gray-100'}`;
+                btn.textContent = sess.title || deriveTitle(sess);
+                btn.addEventListener('click', () => openSession(sess.id));
+                li.appendChild(btn);
+                recentChatsList.appendChild(li);
+            });
+        }
+
+        function createNewSession() {
+            const id = 'sess_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+            const session = { id, title: 'New Chat', messages: [], createdAt: Date.now(), updatedAt: Date.now() };
+            chatSessions.unshift(session);
+            currentSessionId = id;
+            saveSessions();
+            renderRecentChats();
+            // Reset UI
+            messagesContainer.innerHTML = '';
+            const welcomeDiv = document.createElement('div');
+            welcomeDiv.innerHTML = `
+                <div class="flex justify-start">
+                    <div class="max-w-xs md:max-w-md bg-white rounded-2xl px-4 md:px-6 py-3 md:py-4 shadow-sm border border-gray-200 message">
+                        <div class="flex items-start space-x-3">
+                            <div class="w-6 h-6 md:w-8 md:h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-robot text-white text-xs md:text-sm"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-gray-900 mb-2 text-sm md:text-base">Hello! I'm your Legal AI Assistant powered by QRaptor. How can I help you with your legal queries today?</p>
+                                <p class="text-xs text-gray-500">${getCurrentTime()}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            messagesContainer.appendChild(welcomeDiv);
+            chatHistory = [];
+            return session;
+        }
+
+        function openSession(sessionId) {
+            const sess = chatSessions.find(s => s.id === sessionId);
+            if (!sess) return;
+            currentSessionId = sessionId;
+            saveSessions();
+            renderRecentChats();
+
+            messagesContainer.innerHTML = '';
+            // Re-render conversation without mutating history, then sync history
+            (sess.messages || []).forEach(m => {
+                addMessage(m.content, m.role === 'user' ? 'user' : 'assistant', false, { skipStore: true });
+            });
+            chatHistory = (sess.messages || []).slice();
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            closeMobileMenu();
         }
         
         function hideTyping() {
@@ -1094,27 +1220,8 @@
 
         // Clear chat history when starting new chat
         function startNewChat() {
-            console.log("🔄 Starting new chat - clearing history");
-            chatHistory = [];
-            messagesContainer.innerHTML = "";
-            
-            // Add welcome message back
-            const welcomeDiv = document.createElement('div');
-            welcomeDiv.innerHTML = `
-                <div class="flex justify-start">
-                    <div class="max-w-xs md:max-w-md bg-white rounded-2xl px-4 md:px-6 py-3 md:py-4 shadow-sm border border-gray-200 message">
-                        <div class="flex items-start space-x-3">
-                            <div class="w-6 h-6 md:w-8 md:h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-                                <i class="fas fa-robot text-white text-xs md:text-sm"></i>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <p class="text-gray-900 mb-2 text-sm md:text-base">Hello! I'm your Legal AI Assistant powered by QRaptor. How can I help you with your legal queries today?</p>
-                                <p class="text-xs text-gray-500">${getCurrentTime()}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>`;
-            messagesContainer.appendChild(welcomeDiv);
+            console.log("🔄 Starting new chat session");
+            createNewSession();
             closeMobileMenu();
         }
 
@@ -1141,9 +1248,12 @@
         
         sendBtn.addEventListener('click',sendMessage);
         
-        // Use new chat function that clears history
+        // Use new chat function with sessions
         newChatBtn.addEventListener('click', startNewChat);
         newChatIconBtn.addEventListener('click', startNewChat);
+
+        // Ensure recent list initializes (clear static placeholders)
+        if (recentChatsList) { recentChatsList.innerHTML = ''; }
 
         // Close mobile menu on window resize
         window.addEventListener('resize', function() {
