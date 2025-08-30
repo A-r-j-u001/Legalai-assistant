@@ -992,6 +992,10 @@
                     }
                 }
 
+                if (!finalMessage) {
+                    finalMessage = 'The user attached image(s), but no text was detected.';
+                }
+
                 const requestData = {
                     user_message: finalMessage,
                     chat_history: chatHistory.slice(0, -1)
