@@ -6,6 +6,7 @@
     <title>LegalAI - Your Legal Assistant</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/tesseract.min.js"></script>
     <style>
         /* Global Styles */
         * {
@@ -604,6 +605,14 @@
                                 rows="1"
                                 style="min-height: 48px; max-height: 120px;"
                             ></textarea>
+                            <input id="imageInput" type="file" accept="image/*" multiple class="hidden" />
+                            <button
+                                id="attachBtn"
+                                class="absolute right-14 bottom-2 md:right-16 md:bottom-3 w-11 h-11 md:w-12 md:h-12 rounded-full transition-all duration-200 bg-gray-100 text-gray-500 hover-effect flex items-center justify-center"
+                            >
+                                <i class="fas fa-image text-sm md:text-lg"></i>
+                                <span id="imageBadge" class="absolute -top-1 -right-1 hidden px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-600 text-white"></span>
+                            </button>
                             <button
                                 id="sendBtn"
                                 class="absolute right-2 bottom-2 md:right-3 md:bottom-3 w-11 h-11 md:w-12 md:h-12 rounded-full transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover-effect flex items-center justify-center bg-gray-100 text-gray-400"
@@ -642,6 +651,11 @@
         const mobileMenuBtn = document.getElementById('mobileMenuBtn');
         const mobileOverlay = document.getElementById('mobileOverlay');
         const contextIndicator = document.getElementById('contextIndicator');
+        const imageInput = document.getElementById('imageInput');
+        const attachBtn = document.getElementById('attachBtn');
+        const imageBadge = document.getElementById('imageBadge');
+        const inputFloat = document.querySelector('.input-float');
+        let attachedImages = [];
 
         // Initialize app (Guest mode)
         document.addEventListener('DOMContentLoaded', function() {
@@ -776,13 +790,78 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
         
-        function hideTyping() { 
-            typingIndicator.classList.add('hidden'); 
+        function hideTyping() {
+            typingIndicator.classList.add('hidden');
+        }
+
+        // --- IMAGE ATTACHMENT & OCR ---
+        function updateImageBadge() {
+            if (!imageBadge) return;
+            const count = attachedImages.length;
+            if (count > 0) {
+                imageBadge.textContent = String(count);
+                imageBadge.classList.remove('hidden');
+            } else {
+                imageBadge.textContent = '';
+                imageBadge.classList.add('hidden');
+            }
+        }
+
+        function addImages(files) {
+            const imgs = Array.from(files).filter(f => f && f.type && f.type.startsWith('image/'));
+            if (imgs.length === 0) return;
+            attachedImages = attachedImages.concat(imgs);
+            updateImageBadge();
+            updateSendButton();
+        }
+
+        async function extractTextFromAttachedImages() {
+            if (!attachedImages.length || !window.Tesseract) return '';
+            const texts = [];
+            for (const file of attachedImages) {
+                try {
+                    const result = await Tesseract.recognize(file, 'eng+hin');
+                    const text = result && result.data && result.data.text ? result.data.text.trim() : '';
+                    if (text) texts.push(text);
+                } catch (e) {
+                    console.error('OCR failed for image:', file && file.name, e);
+                }
+            }
+            return texts.join('\n\n---\n\n');
+        }
+
+        if (attachBtn && imageInput) {
+            attachBtn.addEventListener('click', () => imageInput.click());
+            imageInput.addEventListener('change', (e) => addImages(e.target.files || []));
+        }
+
+        if (messageInput) {
+            messageInput.addEventListener('paste', (e) => {
+                if (!e.clipboardData || !e.clipboardData.files || e.clipboardData.files.length === 0) return;
+                const imgs = Array.from(e.clipboardData.files).filter(f => f.type.startsWith('image/'));
+                if (imgs.length) {
+                    e.preventDefault();
+                    addImages(imgs);
+                }
+            });
+        }
+
+        if (inputFloat) {
+            ['dragover','dragenter'].forEach(evt => inputFloat.addEventListener(evt, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            }));
+            inputFloat.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (e.dataTransfer && e.dataTransfer.files) addImages(e.dataTransfer.files);
+            });
         }
 
         function updateSendButton() {
             const hasText = messageInput.value.trim().length > 0;
-            if (hasText) {
+            const hasImages = attachedImages && attachedImages.length > 0;
+            if (hasText || hasImages) {
                 sendBtn.disabled=false;
                 sendBtn.className='absolute right-2 bottom-2 md:right-3 md:bottom-3 w-11 h-11 md:w-12 md:h-12 rounded-full transition-all duration-200 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover-effect flex items-center justify-center';
             } else {
@@ -884,36 +963,48 @@
         // ENHANCED SEND MESSAGE FUNCTION WITH CONVERSATION CONTEXT
         async function sendMessage() {
             const message = messageInput.value.trim();
-            if (!message) return;
+            const hasImages = attachedImages && attachedImages.length > 0;
+            if (!message && !hasImages) return;
 
-            addMessage(message, 'user');
+            const displayUserMessage = message || 'Sent image(s) for analysis';
+            addMessage(displayUserMessage, 'user');
             messageInput.value = '';
             updateSendButton();
-            closeMobileMenu(); // Close mobile menu after sending
+            closeMobileMenu();
 
             showTyping();
             updateAPIStatus('processing','Legal Agent Processing...');
 
-            // Show context indicator if we have chat history
-            if (chatHistory.length > 1) { // More than just the current user message
+            if (chatHistory.length > 1) {
                 showContextIndicator();
             }
 
             try {
-                // Build request data with conversation context
+                let finalMessage = message;
+
+                if (hasImages) {
+                    updateAPIStatus('processing','Extracting text from image...');
+                    const ocrText = await extractTextFromAttachedImages();
+                    if (ocrText) {
+                        finalMessage = finalMessage
+                            ? `${finalMessage}\n\n[Extracted from image(s)]:\n${ocrText}`
+                            : `[Extracted from image(s)]:\n${ocrText}`;
+                    }
+                }
+
                 const requestData = {
-                    user_message: message,
-                    chat_history: chatHistory.slice(0, -1) // Send all history except current message
+                    user_message: finalMessage,
+                    chat_history: chatHistory.slice(0, -1)
                 };
 
                 console.log('🚀 Sending request with context:', {
-                    user_message: message,
+                    user_message: finalMessage,
                     chat_history_length: requestData.chat_history.length
                 });
 
                 const response = await fetch("/api/agent", {
                     method: "POST",
-                    headers: { 
+                    headers: {
                         "Content-Type": "application/json",
                         "Accept": "application/json"
                     },
@@ -939,8 +1030,7 @@
                 if (!response.ok) {
                     console.error("API Error Response:", data);
                     updateAPIStatus('error', 'Connection Error');
-                    
-                    // Handle specific error cases
+
                     if (response.status === 401) {
                         addMessage(`🔐 **Authentication Error**\n\nThere seems to be an issue with the API credentials. Please check:\n- QRaptor username and password are correctly set\n- Account has proper permissions\n\nError details: ${data.details || data.error || 'Invalid credentials'}`, 'assistant', true);
                     } else if (response.status === 404) {
@@ -954,15 +1044,11 @@
 
                 console.log("✅ Successful API Response:", data);
 
-                // USE THE IMPROVED EXTRACTION FUNCTION
                 let aiResponse = extractAIResponse(data);
 
-                // Final fallback if no response found
                 if (!aiResponse) {
                     console.warn('❌ No valid response found in data:', data);
                     console.log("📋 Available data keys:", Object.keys(data));
-                    
-                    // Try to extract ANY text content as last resort
                     const dataStr = JSON.stringify(data);
                     if (dataStr.length > 100) {
                         aiResponse = "I received your message and processed it successfully, but I'm having trouble extracting the response. Please try asking your question again.";
@@ -971,7 +1057,6 @@
                     }
                 }
 
-                // REMOVED DISCLAIMER ADDITION HERE - Now handled in addMessage function
                 console.log("📤 Displaying response to user:", aiResponse.substring(0, 200) + "...");
                 addMessage(aiResponse, 'assistant');
                 updateAPIStatus('connected', 'Legal Agent Ready');
@@ -980,15 +1065,19 @@
                 hideTyping();
                 console.error("Network/Fetch Error:", networkError);
                 updateAPIStatus('error', 'Connection Failed');
-                
+
                 let errorMessage = "🌐 **Connection Error**\n\n";
                 if (networkError.name === 'TypeError' && networkError.message.includes('fetch')) {
                     errorMessage += "Unable to connect to the Legal Agent API. Please check:\n- Your internet connection\n- API server status\n- Firewall settings";
                 } else {
                     errorMessage += `Network error: ${networkError.message}`;
                 }
-                
+
                 addMessage(errorMessage, 'assistant', true);
+            } finally {
+                attachedImages = [];
+                updateImageBadge();
+                updateSendButton();
             }
         }
 
