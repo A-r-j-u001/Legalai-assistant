@@ -1240,7 +1240,10 @@
         // Auto-resize textarea
         messageInput.addEventListener('input', function() {
             this.style.height = 'auto';
-            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+            const isXS = window.innerWidth <= 360;
+            const isShort = window.innerHeight <= 600;
+            const cap = isXS ? 96 : (isShort ? 100 : 120);
+            this.style.height = Math.min(this.scrollHeight, cap) + 'px';
             updateSendButton();
         });
 
