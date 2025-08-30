@@ -26,7 +26,16 @@
       </div>
       <div>
         <label class="block text-sm text-gray-700 mb-1">Email</label>
-        <input id="email" type="email" placeholder="Enter your email" required class="w-full border border-gray-300 rounded-xl px-4 py-3 transition-colors duration-200 ease-out focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        <input id="email" type="email" placeholder="Enter your email" pattern="^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$" title="Enter a valid email address" required class="w-full border border-gray-300 rounded-xl px-4 py-3 transition-colors duration-200 ease-out focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+      </div>
+      <!-- Email verify section -->
+      <div class="mt-2">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <button id="sendOtpBtn" type="button" class="px-4 py-2 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 transition-colors duration-200 ease-out disabled:opacity-50 disabled:cursor-not-allowed">Send code</button>
+          <input id="otpInput" inputmode="numeric" pattern="\\d{6}" maxlength="6" class="sm:col-span-1 border border-gray-300 rounded-xl px-4 py-2 transition-colors duration-200 ease-out focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter 6-digit code" />
+          <button id="verifyOtpBtn" type="button" class="px-4 py-2 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 transition-colors duration-200 ease-out disabled:opacity-50 disabled:cursor-not-allowed">Verify</button>
+        </div>
+        <div id="otpStatus" class="mt-1 text-xs text-gray-500"></div>
       </div>
       <div>
         <label class="block text-sm text-gray-700 mb-1">Password</label>
@@ -74,6 +83,34 @@
     const form = document.getElementById('registerForm');
     const pwInput = document.getElementById('password');
     const submitBtn = document.getElementById('submitBtn');
+    const emailInput = document.getElementById('email');
+    const sendOtpBtn = document.getElementById('sendOtpBtn');
+    const verifyOtpBtn = document.getElementById('verifyOtpBtn');
+    const otpInput = document.getElementById('otpInput');
+    const otpStatus = document.getElementById('otpStatus');
+    let sentCode = null;
+    let isEmailVerified = false;
+    let cooldown = 0;
+    let cooldownTimer = null;
+
+    const emailValid = () => /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(emailInput.value.trim());
+
+    function updateOtpUI() {
+      const passOkNow = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,15}$/.test(pwInput.value);
+      sendOtpBtn.disabled = !emailValid() || cooldown > 0 || isEmailVerified;
+      verifyOtpBtn.disabled = !otpInput.value || !sentCode || isEmailVerified;
+      if (isEmailVerified) {
+        otpStatus.textContent = 'Email verified';
+        otpStatus.className = 'mt-1 text-xs text-green-600';
+      } else if (cooldown > 0) {
+        otpStatus.textContent = `Code sent. Resend in ${cooldown}s`;
+        otpStatus.className = 'mt-1 text-xs text-gray-500';
+      } else {
+        otpStatus.textContent = '';
+        otpStatus.className = 'mt-1 text-xs text-gray-500';
+      }
+      submitBtn.disabled = !(passOkNow && isEmailVerified);
+    }
 
     function updateChecklist() {
       const v = pwInput.value;
@@ -106,11 +143,42 @@
       return passOk;
     }
 
-    pwInput.addEventListener('input', () => { updateChecklist(); pwChecklist.classList.remove('hidden'); });
+    pwInput.addEventListener('input', () => { updateChecklist(); pwChecklist.classList.remove('hidden'); updateOtpUI(); });
     pwInput.addEventListener('focus', () => pwChecklist.classList.remove('hidden'));
     pwInput.addEventListener('blur', () => { if (!pwInput.value) pwChecklist.classList.add('hidden'); });
+
+    emailInput.addEventListener('input', () => {
+      isEmailVerified = false; sentCode = null; otpInput.value = '';
+      if (cooldownTimer) { clearInterval(cooldownTimer); cooldownTimer = null; cooldown = 0; }
+      updateOtpUI();
+    });
+
+    sendOtpBtn.addEventListener('click', () => {
+      if (!emailValid()) return;
+      isEmailVerified = false;
+      sentCode = (Math.floor(Math.random()*900000)+100000).toString();
+      cooldown = 60;
+      if (cooldownTimer) clearInterval(cooldownTimer);
+      cooldownTimer = setInterval(() => {
+        cooldown -= 1; if (cooldown <= 0) { clearInterval(cooldownTimer); cooldownTimer = null; cooldown = 0; }
+        updateOtpUI();
+      }, 1000);
+      updateOtpUI();
+    });
+
+    verifyOtpBtn.addEventListener('click', () => {
+      const code = (otpInput.value || '').trim();
+      if (sentCode && code === sentCode) {
+        isEmailVerified = true; updateOtpUI();
+      } else {
+        otpStatus.textContent = 'Invalid code';
+        otpStatus.className = 'mt-1 text-xs text-red-600';
+      }
+    });
+
     // initialize state
     updateChecklist();
+    updateOtpUI();
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
