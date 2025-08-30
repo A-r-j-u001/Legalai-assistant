@@ -599,7 +599,16 @@
             if (nameEl) nameEl.textContent = 'Guest';
             if (planEl) planEl.textContent = 'Guest';
             const logoutBtn = document.getElementById('logoutBtn');
-            if (logoutBtn) logoutBtn.classList.add('hidden');
+            if (logoutBtn) {
+                logoutBtn.classList.remove('hidden');
+                logoutBtn.addEventListener('click', () => {
+                    try {
+                        localStorage.removeItem('guest_session');
+                        localStorage.removeItem('guest_profile');
+                    } catch (e) {}
+                    window.location.reload();
+                });
+            }
 
             document.getElementById('welcomeTime').textContent = getCurrentTime();
             updateConnectionStatus('connected', 'Connected to Legal Agent • Ready');
