@@ -292,6 +292,24 @@
         }
         .message-input-container p.text-xs { display: none; }
 
+        /* Textarea sizing class (replaces inline styles) */
+        .message-textarea { min-height: 48px; max-height: 120px; }
+
+        /* Extra small phones */
+        @media (max-width: 360px) {
+            .chat-container { padding: 12px; }
+            .message-textarea { max-height: 96px; }
+            .input-float #sendBtn, .input-float #attachBtn { width: 40px; height: 40px; }
+            .input-float #sendBtn { right: 6px; bottom: 6px; }
+            .input-float #attachBtn { right: 52px; bottom: 6px; }
+            .input-float textarea { padding: 10px 44px 10px 12px; }
+        }
+
+        /* Short-height devices (landscape phones) */
+        @media (max-height: 600px) {
+            .chat-container { padding-top: 8px; padding-bottom: 8px; }
+        }
+
         /* QRaptor Branding */
         .qraptor-brand {
             display: flex;
