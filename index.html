@@ -1092,6 +1092,8 @@
             const hasImages = attachedImages && attachedImages.length > 0;
             if (!message && !hasImages) return;
 
+            if (!currentSessionId) { createNewSession(); }
+
             const displayUserMessage = message || 'Sent image(s) for analysis';
             addMessage(displayUserMessage, 'user');
             messageInput.value = '';
