@@ -30,7 +30,22 @@ export async function getSupabase() {
   return supabase;
 }
 
+const GUEST_FLAG = 'guest_session';
+const GUEST_PROFILE_KEY = 'guest_profile';
+function isGuest(){ return localStorage.getItem(GUEST_FLAG) === '1'; }
+export function guestLogin(name='Guest', plan='Guest'){
+  localStorage.setItem(GUEST_FLAG, '1');
+  localStorage.setItem(GUEST_PROFILE_KEY, JSON.stringify({ name, plan }));
+}
+export function guestLogout(){
+  localStorage.removeItem(GUEST_FLAG);
+  localStorage.removeItem(GUEST_PROFILE_KEY);
+}
+
 export async function requireAuth() {
+  if (isGuest()) {
+    return { user: { id: 'guest' } };
+  }
   const sb = await getSupabase();
   const { data: { session } } = await sb.auth.getSession();
   if (!session) {
@@ -41,6 +56,9 @@ export async function requireAuth() {
 }
 
 export async function getUserProfile() {
+  if (isGuest()) {
+    try { const gp = JSON.parse(localStorage.getItem(GUEST_PROFILE_KEY)||'{}'); return { id: 'guest', email: '', name: gp.name || 'Guest', plan: gp.plan || 'Guest' }; } catch { return { id:'guest', email:'', name:'Guest', plan:'Guest' }; }
+  }
   const sb = await getSupabase();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return null;
@@ -74,7 +92,10 @@ export async function signUp({ email, password, name, plan }) {
 }
 
 export async function signOut() {
-  const sb = await getSupabase();
-  await sb.auth.signOut();
+  guestLogout();
+  try {
+    const sb = await getSupabase();
+    await sb.auth.signOut();
+  } catch {}
   window.location.replace('/login.html');
 }
