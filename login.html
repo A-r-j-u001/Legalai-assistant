@@ -3,194 +3,41 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Login • LegalAI</title>
+  <title>Guest Login • LegalAI</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    html { scroll-behavior: smooth; }
+  </style>
 </head>
 <body class="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-  <div class="w-full max-w-sm sm:max-w-md bg-white rounded-2xl p-5 sm:p-6 shadow transition-shadow duration-200 ease-out border border-gray-200 focus-within:shadow-lg">
-    <div class="flex items-center space-x-3 mb-4">
-      <div class="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-        <i class="fas fa-scale-balanced text-white text-lg"></i>
+  <div class="w-full max-w-sm sm:max-w-md bg-white rounded-2xl p-6 shadow border border-gray-200 text-center">
+    <div class="flex items-center justify-center space-x-3 mb-4">
+      <div class="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+        <i class="fas fa-scale-balanced text-white text-xl"></i>
       </div>
-      <div>
+      <div class="text-left">
         <h1 class="text-xl font-bold text-gray-900">LegalAI</h1>
-        <p class="text-xs text-gray-500">Login to continue</p>
+        <p class="text-xs text-gray-500">Hackathon access</p>
       </div>
     </div>
 
-    <form id="loginForm" class="space-y-3" novalidate>
-      <div>
-        <label class="block text-sm text-gray-700 mb-1">Email</label>
-        <input id="email" type="email" placeholder="Enter your email" pattern="^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$" title="Enter a valid email address" required class="w-full border border-gray-300 rounded-xl px-4 py-3 transition-colors duration-200 ease-out focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-      </div>
-      <div>
-        <label class="block text-sm text-gray-700 mb-1">Password</label>
-        <div class="relative">
-          <input id="password" type="password" placeholder="Enter your password" required class="w-full border border-gray-300 rounded-xl px-4 py-3 pr-12 transition-colors duration-200 ease-out focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-          <button id="togglePassword" type="button" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700" aria-label="Show password">
-            <i class="fas fa-eye"></i>
-          </button>
-        </div>
-      </div>
-      <div id="authError" class="hidden text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2"></div>
-      <button id="loginBtn" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200 ease-out active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed" disabled>Login</button>
-    </form>
+    <p class="text-sm text-gray-600 mb-4">Use guest access to try the assistant instantly.</p>
 
-    <div class="flex items-center justify-between my-3">
-      <span class="h-px bg-gray-200 flex-1"></span>
-      <span class="px-3 text-xs text-gray-500">or</span>
-      <span class="h-px bg-gray-200 flex-1"></span>
-    </div>
-
-    <button id="otpBtn" class="w-full bg-white border border-gray-300 py-3 rounded-xl hover:bg-gray-50 transition-colors duration-200 ease-out flex items-center justify-center space-x-2">
-      <i class="fas fa-envelope"></i><span>Send login link</span>
+    <button id="guestBtn" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200 ease-out active:scale-[0.98]">
+      Continue as Guest
     </button>
 
-    <!-- OTP confirm panel -->
-    <div id="otpPanel" class="mt-3 hidden">
-      <label class="block text-sm text-gray-700 mb-1">Confirm email</label>
-      <div class="flex gap-2">
-        <input id="otpEmail" type="email" placeholder="Enter your email" pattern="^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$" class="flex-1 border border-gray-300 rounded-xl px-4 py-3 transition-colors duration-200 ease-out focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-        <button id="sendLinkBtn" class="px-4 py-3 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 transition-colors duration-200 ease-out disabled:opacity-50 disabled:cursor-not-allowed" disabled>Send link</button>
-      </div>
-      <div id="otpLinkStatus" class="text-xs text-gray-500 mt-1"></div>
-    </div>
-
-    <!-- Developer setup (stores mock users locally) -->
-    <details class="mt-4 select-none">
-      <summary class="text-xs text-gray-500 cursor-pointer">Developer setup</summary>
-      <div class="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
-        <input id="devEmail" type="email" placeholder="Dev email" class="border border-gray-300 rounded-xl px-3 py-2" />
-        <input id="devPassword" type="text" placeholder="Dev password" class="border border-gray-300 rounded-xl px-3 py-2" />
-        <div class="flex gap-2">
-          <button id="saveDev" type="button" class="px-3 py-2 rounded-xl border border-gray-300 bg-white hover:bg-gray-50">Save</button>
-          <button id="clearDev" type="button" class="px-3 py-2 rounded-xl border border-gray-300 bg-white hover:bg-gray-50">Clear</button>
-        </div>
-      </div>
-      <p class="text-[11px] text-gray-500 mt-1">Saves credentials to your browser only for development.</p>
-    </details>
-
-    <p class="text-xs text-gray-500 mt-3 text-center">No account? <a href="/register.html" class="text-blue-600">Register</a></p>
+    <p class="text-xs text-gray-500 mt-4">Full auth is disabled for the event. Guest sessions are temporary.</p>
   </div>
 
   <script type="module">
-    import { signInWithPassword, signInWithOtp } from './auth.js';
-
-    const form = document.getElementById('loginForm');
-    const otpBtn = document.getElementById('otpBtn');
-    const loginBtn = document.getElementById('loginBtn');
-    const emailEl = document.getElementById('email');
-    const passwordEl = document.getElementById('password');
-    const errorBox = document.getElementById('authError');
-    const otpPanel = document.getElementById('otpPanel');
-    const otpEmail = document.getElementById('otpEmail');
-    const sendLinkBtn = document.getElementById('sendLinkBtn');
-    const otpLinkStatus = document.getElementById('otpLinkStatus');
-    const devEmail = document.getElementById('devEmail');
-    const devPassword = document.getElementById('devPassword');
-    const saveDev = document.getElementById('saveDev');
-    const clearDev = document.getElementById('clearDev');
-
-    function setError(msg) {
-      errorBox.textContent = msg;
-      errorBox.classList.remove('hidden');
-    }
-    function clearError() { errorBox.classList.add('hidden'); errorBox.textContent = ''; }
-    function updateBtnState() {
-      const ok = emailEl.checkValidity() && passwordEl.value.trim().length > 0;
-      loginBtn.disabled = !ok;
-    }
-    emailEl.addEventListener('input', () => { clearError(); updateBtnState(); });
-    passwordEl.addEventListener('input', () => { clearError(); updateBtnState(); });
-    updateBtnState();
-
-    function getMockUsers() {
-      try { return JSON.parse(localStorage.getItem('mock_users')||'[]'); } catch { return []; }
-    }
-    function setMockUsers(list) {
-      try { localStorage.setItem('mock_users', JSON.stringify(list)); } catch {}
-    }
-    async function tryMockFallback(email, password) {
-      const arr = getMockUsers();
-      const found = arr.find(u => (u.email||'').toLowerCase()===email.toLowerCase() && u.password===password);
-      return !!found;
-    }
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      clearError();
-      if (!emailEl.checkValidity()) { emailEl.reportValidity(); return; }
-      const email = emailEl.value.trim();
-      const password = passwordEl.value.trim();
-      loginBtn.disabled = true;
-      const oldText = loginBtn.textContent;
-      loginBtn.textContent = 'Logging in...';
-      try {
-        await signInWithPassword(email, password);
-        window.location.replace('/');
-      } catch (err) {
-        const msg = (err && err.message) ? err.message : '';
-        const configIssue = /config|Supabase|anon key|URL/i.test(msg);
-        if (configIssue) {
-          const ok = await tryMockFallback(email, password);
-          if (ok) { window.location.replace('/'); return; }
-        }
-        setError('Invalid email or password.');
-      } finally {
-        loginBtn.textContent = oldText;
-        updateBtnState();
-      }
+    import { guestLogin } from './auth.js';
+    const btn = document.getElementById('guestBtn');
+    btn.addEventListener('click', () => {
+      guestLogin('Guest', 'Guest');
+      window.location.replace('/');
     });
-
-    otpBtn.addEventListener('click', () => {
-      otpPanel.classList.remove('hidden');
-      otpEmail.value = emailEl.value;
-      updateSendLinkState();
-      otpEmail.focus();
-    });
-
-    function emailPatternOk(v){ return /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(v.trim()); }
-    function updateSendLinkState(){ sendLinkBtn.disabled = !emailPatternOk(otpEmail.value); }
-    otpEmail.addEventListener('input', updateSendLinkState);
-
-    sendLinkBtn.addEventListener('click', () => {
-      const v = otpEmail.value.trim();
-      if (!emailPatternOk(v)) { otpEmail.reportValidity(); return; }
-      const exists = getMockUsers().some(u => (u.email||'').toLowerCase() === v.toLowerCase());
-      if (exists) {
-        otpLinkStatus.textContent = 'Login link sent (simulated for dev).';
-        otpLinkStatus.className = 'text-xs text-green-600 mt-1';
-      } else {
-        otpLinkStatus.textContent = 'Email not found.';
-        otpLinkStatus.className = 'text-xs text-red-600 mt-1';
-      }
-    });
-
-    // Show/Hide password toggle
-    const toggleBtn = document.getElementById('togglePassword');
-    toggleBtn.addEventListener('click', () => {
-      const input = document.getElementById('password');
-      const isHidden = input.type === 'password';
-      input.type = isHidden ? 'text' : 'password';
-      toggleBtn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
-      const icon = toggleBtn.querySelector('i');
-      icon.className = isHidden ? 'fas fa-eye-slash' : 'fas fa-eye';
-    });
-
-    // Developer setup handlers
-    saveDev.addEventListener('click', () => {
-      const e = (devEmail.value||'').trim();
-      const p = (devPassword.value||'').trim();
-      if (!emailPatternOk(e) || !p) return;
-      const arr = getMockUsers();
-      const idx = arr.findIndex(u => (u.email||'').toLowerCase()===e.toLowerCase());
-      if (idx>=0) arr[idx].password = p; else arr.push({email:e, password:p});
-      setMockUsers(arr);
-      devEmail.value=''; devPassword.value='';
-      alert('Saved developer credentials locally.');
-    });
-    clearDev.addEventListener('click', () => { setMockUsers([]); alert('Cleared local developer users.'); });
   </script>
 </body>
 </html>
