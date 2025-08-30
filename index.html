@@ -592,26 +592,15 @@
         const mobileOverlay = document.getElementById('mobileOverlay');
         const contextIndicator = document.getElementById('contextIndicator');
 
-        // Initialize app with auth
-        document.addEventListener('DOMContentLoaded', async function() {
-            try {
-                const { requireAuth, getUserProfile, signOut } = await import('./auth.js');
-                const session = await requireAuth();
-                if (!session) return;
-                const profile = await getUserProfile();
-                if (profile) {
-                    const nameEl = document.getElementById('sidebarUserName');
-                    const planEl = document.getElementById('sidebarUserPlan');
-                    if (nameEl) nameEl.textContent = profile.name;
-                    if (planEl) planEl.textContent = profile.plan;
-                }
-                const logoutBtn = document.getElementById('logoutBtn');
-                if (logoutBtn) logoutBtn.addEventListener('click', async () => { await signOut(); });
-            } catch (e) {
-                console.error('Auth init failed', e);
-                window.location.replace('/login.html');
-                return;
-            }
+        // Initialize app (Guest mode)
+        document.addEventListener('DOMContentLoaded', function() {
+            const nameEl = document.getElementById('sidebarUserName');
+            const planEl = document.getElementById('sidebarUserPlan');
+            if (nameEl) nameEl.textContent = 'Guest';
+            if (planEl) planEl.textContent = 'Guest';
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) logoutBtn.classList.add('hidden');
+
             document.getElementById('welcomeTime').textContent = getCurrentTime();
             updateConnectionStatus('connected', 'Connected to Legal Agent • Ready');
             updateAPIStatus('connected', 'Legal Agent Ready');
