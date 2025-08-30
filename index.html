@@ -251,6 +251,25 @@
             box-shadow: 0 8px 24px rgba(2,8,20,0.06), 0 2px 6px rgba(2,8,20,0.06);
         }
 
+        /* Header to content gradient blend */
+        .header-blend {
+            background: linear-gradient(to bottom,
+                rgba(255,255,255,0.78) 0%,
+                rgba(255,255,255,0.62) 55%,
+                rgba(248,250,252,0.50) 85%,
+                rgba(248,250,252,0.00) 100%) !important;
+            border-bottom-color: transparent !important;
+        }
+
+        /* Chat container subtle top gradient to match header fade */
+        .chat-blend {
+            background: linear-gradient(to bottom,
+                rgba(248,250,252,1) 0%,
+                rgba(248,250,252,0.85) 12px,
+                rgba(248,250,252,0.55) 28px,
+                rgba(248,250,252,0.00) 72px) , #f9fafb !important;
+        }
+
         /* Floating input wrapper */
         .input-float {
             background: rgba(255,255,255,0.85);
@@ -502,7 +521,7 @@
                 <span>Powered by QRaptor AI</span>
             </a>
             <!-- Header -->
-            <div class="bg-white glass-panel border-b border-gray-200 px-4 md:px-6 py-4 shadow-sm">
+            <div class="bg-white glass-panel header-blend border-b border-gray-200 px-4 md:px-6 py-4 shadow-sm">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-3">
                         <!-- Mobile Menu Button -->
@@ -531,7 +550,7 @@
             </div>
 
             <!-- Chat Messages -->
-            <div id="chatContainer" class="flex-1 overflow-y-auto bg-gray-50 chat-scroll">
+            <div id="chatContainer" class="flex-1 overflow-y-auto bg-gray-50 chat-scroll chat-blend">
                 <div class="max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-8 chat-container">
                     <div id="messages" class="space-y-4 md:space-y-6">
                         <!-- Welcome Message -->
