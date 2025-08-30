@@ -10,7 +10,11 @@
         /* Global Styles */
         * {
             box-sizing: border-box;
-            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+            transition: background-color 220ms ease-out, color 220ms ease-out, border-color 220ms ease-out;
+        }
+        html { scroll-behavior: smooth; }
+        @media (prefers-reduced-motion: reduce) {
+            * { transition: none !important; animation: none !important; }
         }
 
         .message, .hover-effect {
@@ -229,12 +233,13 @@
 
         /* Hover Effects */
         .hover-effect {
-            transition: all 0.2s ease-in-out;
+            transition: transform 180ms ease-out, box-shadow 180ms ease-out, background-color 180ms ease-out, color 180ms ease-out;
+            will-change: transform, box-shadow;
         }
 
         .hover-effect:hover {
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.12);
         }
 
         /* QRaptor Branding */
