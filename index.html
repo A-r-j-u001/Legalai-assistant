@@ -7,6 +7,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/tesseract.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+    <script>window.pdfjsLib && (window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js');</script>
+    <script src="https://unpkg.com/mammoth/mammoth.browser.min.js"></script>
     <style>
         /* Global Styles */
         * {
@@ -624,13 +627,27 @@
                                 rows="1"
                             ></textarea>
                             <input id="imageInput" type="file" accept="image/*" multiple class="hidden" />
+                            <input id="pdfInput" type="file" accept="application/pdf" multiple class="hidden" />
+                            <input id="docInput" type="file" accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple class="hidden" />
                             <button
                                 id="attachBtn"
-                                class="absolute right-14 bottom-2 md:right-16 md:bottom-3 w-11 h-11 md:w-12 md:h-12 rounded-full transition-all duration-200 bg-gray-100 text-gray-500 hover-effect flex items-center justify-center"
+                                class="absolute right-14 bottom-2 md:right-16 md:bottom-3 w-11 h-11 md:w-12 md:h-12 rounded-full transition-all duration-200 bg-gray-100 text-gray-600 hover-effect flex items-center justify-center"
+                                aria-haspopup="true" aria-expanded="false"
                             >
-                                <i class="fas fa-image text-sm md:text-lg"></i>
+                                <i class="fas fa-plus text-sm md:text-lg"></i>
                                 <span id="imageBadge" class="absolute -top-1 -right-1 hidden px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-600 text-white"></span>
                             </button>
+                            <div id="attachmentMenu" class="absolute right-2 bottom-16 md:bottom-18 bg-white glass-panel border border-gray-200 rounded-xl shadow-lg w-44 py-2 hidden z-20">
+                                <button id="menuImage" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2">
+                                    <i class="fas fa-image text-gray-500 w-4 text-center"></i><span>Image</span>
+                                </button>
+                                <button id="menuPdf" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2">
+                                    <i class="fas fa-file-pdf text-gray-500 w-4 text-center"></i><span>PDF</span>
+                                </button>
+                                <button id="menuDoc" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2">
+                                    <i class="fas fa-file-word text-gray-500 w-4 text-center"></i><span>Doc</span>
+                                </button>
+                            </div>
                             <button
                                 id="sendBtn"
                                 class="absolute right-2 bottom-2 md:right-3 md:bottom-3 w-11 h-11 md:w-12 md:h-12 rounded-full transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover-effect flex items-center justify-center bg-gray-100 text-gray-400"
@@ -674,7 +691,13 @@
         const imageBadge = document.getElementById('imageBadge');
         const inputFloat = document.querySelector('.input-float');
         const recentChatsList = document.getElementById('recentChats');
-        let attachedImages = [];
+        const pdfInput = document.getElementById('pdfInput');
+        const docInput = document.getElementById('docInput');
+        const attachmentMenu = document.getElementById('attachmentMenu');
+        const menuImage = document.getElementById('menuImage');
+        const menuPdf = document.getElementById('menuPdf');
+        const menuDoc = document.getElementById('menuDoc');
+        let attachments = [];
 
         // --- CHAT SESSIONS ---
         let chatSessions = [];
@@ -944,10 +967,10 @@
             typingIndicator.classList.add('hidden');
         }
 
-        // --- IMAGE ATTACHMENT & OCR ---
-        function updateImageBadge() {
+        // --- ATTACHMENTS & EXTRACTION ---
+        function updateAttachmentBadge() {
             if (!imageBadge) return;
-            const count = attachedImages.length;
+            const count = attachments.length;
             if (count > 0) {
                 imageBadge.textContent = String(count);
                 imageBadge.classList.remove('hidden');
@@ -957,41 +980,124 @@
             }
         }
 
-        function addImages(files) {
-            const imgs = Array.from(files).filter(f => f && f.type && f.type.startsWith('image/'));
-            if (imgs.length === 0) return;
-            attachedImages = attachedImages.concat(imgs);
-            updateImageBadge();
+        function detectKind(file) {
+            if (!file) return null;
+            if (file.type && file.type.startsWith('image/')) return 'image';
+            if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) return 'pdf';
+            if (/\.(doc|docx)$/i.test(file.name) || file.type === 'application/msword' || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') return 'doc';
+            return null;
+        }
+
+        function addAttachments(files) {
+            const arr = Array.from(files || []);
+            const allowed = arr.map(f => ({ file: f, kind: detectKind(f) })).filter(x => x.kind);
+            if (!allowed.length) return;
+            attachments = attachments.concat(allowed);
+            updateAttachmentBadge();
             updateSendButton();
         }
 
-        async function extractTextFromAttachedImages() {
-            if (!attachedImages.length || !window.Tesseract) return '';
+        async function readAsArrayBuffer(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        async function extractFromPdf(file) {
+            if (!window.pdfjsLib) return '';
+            try {
+                const data = await readAsArrayBuffer(file);
+                const pdf = await pdfjsLib.getDocument({ data }).promise;
+                let fullText = '';
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const content = await page.getTextContent();
+                    const strings = content.items.map(it => it.str).join(' ');
+                    fullText += (i > 1 ? '\n\n' : '') + strings;
+                }
+                return fullText.trim();
+            } catch (e) {
+                console.error('PDF extract error:', e);
+                return '';
+            }
+        }
+
+        async function extractFromDoc(file) {
+            if (!window.mammoth) return '';
+            try {
+                const arrayBuffer = await readAsArrayBuffer(file);
+                const result = await mammoth.extractRawText({ arrayBuffer });
+                return (result && result.value ? result.value : '').trim();
+            } catch (e) {
+                console.error('DOC extract error:', e);
+                return '';
+            }
+        }
+
+        async function extractFromImage(file) {
+            if (!window.Tesseract) return '';
+            try {
+                const result = await Tesseract.recognize(file, 'eng+hin');
+                return (result && result.data && result.data.text ? result.data.text : '').trim();
+            } catch (e) {
+                console.error('OCR failed for image:', file && file.name, e);
+                return '';
+            }
+        }
+
+        async function extractTextFromAttachments() {
+            if (!attachments.length) return '';
             const texts = [];
-            for (const file of attachedImages) {
-                try {
-                    const result = await Tesseract.recognize(file, 'eng+hin');
-                    const text = result && result.data && result.data.text ? result.data.text.trim() : '';
-                    if (text) texts.push(text);
-                } catch (e) {
-                    console.error('OCR failed for image:', file && file.name, e);
+            for (const item of attachments) {
+                if (item.kind === 'image') {
+                    const t = await extractFromImage(item.file);
+                    if (t) texts.push(t);
+                } else if (item.kind === 'pdf') {
+                    const t = await extractFromPdf(item.file);
+                    if (t) texts.push(t);
+                } else if (item.kind === 'doc') {
+                    const t = await extractFromDoc(item.file);
+                    if (t) texts.push(t);
                 }
             }
             return texts.join('\n\n---\n\n');
         }
 
-        if (attachBtn && imageInput) {
-            attachBtn.addEventListener('click', () => imageInput.click());
-            imageInput.addEventListener('change', (e) => addImages(e.target.files || []));
+        // Attach menu events
+        if (attachBtn) {
+            attachBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const expanded = attachBtn.getAttribute('aria-expanded') === 'true';
+                attachBtn.setAttribute('aria-expanded', (!expanded).toString());
+                attachmentMenu.classList.toggle('hidden');
+            });
+            document.addEventListener('click', (e) => {
+                if (!attachmentMenu.contains(e.target) && e.target !== attachBtn) {
+                    attachmentMenu.classList.add('hidden');
+                    attachBtn.setAttribute('aria-expanded','false');
+                }
+            });
         }
+
+        if (menuImage && imageInput) menuImage.addEventListener('click', () => { attachmentMenu.classList.add('hidden'); attachBtn.setAttribute('aria-expanded','false'); imageInput.click(); });
+        if (menuPdf && pdfInput) menuPdf.addEventListener('click', () => { attachmentMenu.classList.add('hidden'); attachBtn.setAttribute('aria-expanded','false'); pdfInput.click(); });
+        if (menuDoc && docInput) menuDoc.addEventListener('click', () => { attachmentMenu.classList.add('hidden'); attachBtn.setAttribute('aria-expanded','false'); docInput.click(); });
+
+        if (imageInput) imageInput.addEventListener('change', (e) => addAttachments(e.target.files));
+        if (pdfInput) pdfInput.addEventListener('change', (e) => addAttachments(e.target.files));
+        if (docInput) docInput.addEventListener('change', (e) => addAttachments(e.target.files));
 
         if (messageInput) {
             messageInput.addEventListener('paste', (e) => {
                 if (!e.clipboardData || !e.clipboardData.files || e.clipboardData.files.length === 0) return;
-                const imgs = Array.from(e.clipboardData.files).filter(f => f.type.startsWith('image/'));
-                if (imgs.length) {
+                const files = Array.from(e.clipboardData.files);
+                const valid = files.filter(f => detectKind(f));
+                if (valid.length) {
                     e.preventDefault();
-                    addImages(imgs);
+                    addAttachments(valid);
                 }
             });
         }
@@ -1004,14 +1110,14 @@
             inputFloat.addEventListener('drop', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                if (e.dataTransfer && e.dataTransfer.files) addImages(e.dataTransfer.files);
+                if (e.dataTransfer && e.dataTransfer.files) addAttachments(e.dataTransfer.files);
             });
         }
 
         function updateSendButton() {
             const hasText = messageInput.value.trim().length > 0;
-            const hasImages = attachedImages && attachedImages.length > 0;
-            if (hasText || hasImages) {
+            const hasAttach = attachments && attachments.length > 0;
+            if (hasText || hasAttach) {
                 sendBtn.disabled=false;
                 sendBtn.className='absolute right-2 bottom-2 md:right-3 md:bottom-3 w-11 h-11 md:w-12 md:h-12 rounded-full transition-all duration-200 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover-effect flex items-center justify-center';
             } else {
@@ -1113,12 +1219,12 @@
         // ENHANCED SEND MESSAGE FUNCTION WITH CONVERSATION CONTEXT
         async function sendMessage() {
             const message = messageInput.value.trim();
-            const hasImages = attachedImages && attachedImages.length > 0;
-            if (!message && !hasImages) return;
+            const hasAttach = attachments && attachments.length > 0;
+            if (!message && !hasAttach) return;
 
             if (!currentSessionId) { createNewSession(); }
 
-            const displayUserMessage = message || 'Sent image(s) for analysis';
+            const displayUserMessage = message || 'Sent attachment(s) for analysis';
             addMessage(displayUserMessage, 'user');
             messageInput.value = '';
             updateSendButton();
@@ -1134,13 +1240,13 @@
             try {
                 let finalMessage = message;
 
-                if (hasImages) {
-                    updateAPIStatus('processing','Extracting text from image...');
-                    const ocrText = await extractTextFromAttachedImages();
-                    if (ocrText) {
+                if (hasAttach) {
+                    updateAPIStatus('processing','Extracting text from attachments...');
+                    const extracted = await extractTextFromAttachments();
+                    if (extracted) {
                         finalMessage = finalMessage
-                            ? `${finalMessage}\n\n[Extracted from image(s)]:\n${ocrText}`
-                            : `[Extracted from image(s)]:\n${ocrText}`;
+                            ? `${finalMessage}\n\n[Extracted from attachment(s)]:\n${extracted}`
+                            : `[Extracted from attachment(s)]:\n${extracted}`;
                     }
                 }
 
@@ -1231,9 +1337,11 @@
 
                 addMessage(errorMessage, 'assistant', true);
             } finally {
-                attachedImages = [];
-                updateImageBadge();
+                attachments = [];
+                updateAttachmentBadge();
                 updateSendButton();
+                if (attachmentMenu) attachmentMenu.classList.add('hidden');
+                if (attachBtn) attachBtn.setAttribute('aria-expanded','false');
             }
         }
 
