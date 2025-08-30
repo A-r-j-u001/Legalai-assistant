@@ -253,14 +253,24 @@
 
         /* Floating input wrapper */
         .input-float {
-            background: rgba(255,255,255,0.75);
+            background: rgba(255,255,255,0.85);
             -webkit-backdrop-filter: blur(10px) saturate(160%);
             backdrop-filter: blur(10px) saturate(160%);
-            border: 1px solid rgba(255,255,255,0.6);
+            border: 1px solid rgba(255,255,255,0.7);
             border-radius: 16px;
             padding: 6px;
-            box-shadow: 0 12px 32px rgba(2,8,20,0.10), 0 4px 12px rgba(2,8,20,0.08);
+            box-shadow: 0 14px 36px rgba(2,8,20,0.14), 0 6px 16px rgba(2,8,20,0.10);
         }
+
+        /* Bottom input container: transparent, no extra white area */
+        .message-input-container {
+            background: transparent !important;
+            border-top: 0 !important;
+            box-shadow: none !important;
+            padding-top: 8px;
+            padding-bottom: 8px;
+        }
+        .message-input-container p.text-xs { display: none; }
 
         /* QRaptor Branding */
         .qraptor-brand {
