@@ -36,7 +36,24 @@
             <i class="fas fa-eye"></i>
           </button>
         </div>
-        <p class="mt-1 text-xs text-gray-500">8–15 chars, include 1 uppercase, 1 number, and 1 special character.</p>
+        <ul id="pwChecklist" class="mt-2 space-y-1 text-xs">
+          <li id="req-length" class="flex items-center text-gray-500">
+            <i class="fas fa-circle-xmark mr-2"></i>
+            8–15 characters
+          </li>
+          <li id="req-upper" class="flex items-center text-gray-500">
+            <i class="fas fa-circle-xmark mr-2"></i>
+            At least 1 uppercase letter
+          </li>
+          <li id="req-number" class="flex items-center text-gray-500">
+            <i class="fas fa-circle-xmark mr-2"></i>
+            At least 1 number
+          </li>
+          <li id="req-special" class="flex items-center text-gray-500">
+            <i class="fas fa-circle-xmark mr-2"></i>
+            At least 1 special character
+          </li>
+        </ul>
       </div>
       <div>
         <label class="block text-sm text-gray-700 mb-1">Plan</label>
@@ -45,7 +62,7 @@
           <option value="Premium">Premium</option>
         </select>
       </div>
-      <button class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl hover:from-blue-700 hover:to-purple-700">Create account</button>
+      <button id="submitBtn" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed">Create account</button>
     </form>
 
     <p class="text-xs text-gray-500 mt-3 text-center">Already have an account? <a href="/login.html" class="text-blue-600">Login</a></p>
@@ -55,17 +72,51 @@
     import { signUp } from './auth.js';
 
     const form = document.getElementById('registerForm');
+    const pwInput = document.getElementById('password');
+    const submitBtn = document.getElementById('submitBtn');
+
+    function updateChecklist() {
+      const v = pwInput.value;
+      const okLen = v.length >= 8 && v.length <= 15;
+      const okUpper = /[A-Z]/.test(v);
+      const okNum = /\d/.test(v);
+      const okSpec = /[^A-Za-z0-9]/.test(v);
+
+      const setItem = (id, ok) => {
+        const el = document.getElementById(id);
+        const icon = el.querySelector('i');
+        if (ok) {
+          el.classList.remove('text-gray-500');
+          el.classList.add('text-green-600');
+          icon.className = 'fas fa-circle-check mr-2';
+        } else {
+          el.classList.remove('text-green-600');
+          el.classList.add('text-gray-500');
+          icon.className = 'fas fa-circle-xmark mr-2';
+        }
+      };
+
+      setItem('req-length', okLen);
+      setItem('req-upper', okUpper);
+      setItem('req-number', okNum);
+      setItem('req-special', okSpec);
+
+      const passOk = okLen && okUpper && okNum && okSpec;
+      submitBtn.disabled = !passOk;
+      return passOk;
+    }
+
+    pwInput.addEventListener('input', updateChecklist);
+    // initialize state
+    updateChecklist();
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const name = document.getElementById('name').value.trim();
       const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value.trim();
+      const password = pwInput.value.trim();
       const plan = document.getElementById('plan').value;
-      const passOk = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,15}$/.test(password);
-      if (!passOk) {
-        alert('Password must be 8–15 chars with at least 1 uppercase, 1 number, and 1 special character.');
-        return;
-      }
+      if (!updateChecklist()) return;
       try {
         await signUp({ email, password, name, plan });
         alert('Check your email for verification to complete signup. After verifying, return to login.');
@@ -78,9 +129,8 @@
     // Show/Hide password toggle
     const toggleBtn = document.getElementById('togglePassword');
     toggleBtn.addEventListener('click', () => {
-      const input = document.getElementById('password');
-      const isHidden = input.type === 'password';
-      input.type = isHidden ? 'text' : 'password';
+      const isHidden = pwInput.type === 'password';
+      pwInput.type = isHidden ? 'text' : 'password';
       toggleBtn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
       const icon = toggleBtn.querySelector('i');
       icon.className = isHidden ? 'fas fa-eye-slash' : 'fas fa-eye';
