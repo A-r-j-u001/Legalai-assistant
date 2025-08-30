@@ -30,7 +30,8 @@
       </div>
       <div>
         <label class="block text-sm text-gray-700 mb-1">Password</label>
-        <input id="password" type="password" minlength="6" required class="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        <input id="password" type="password" minlength="8" maxlength="15" pattern="^(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).{8,15}$" title="8–15 chars, at least 1 uppercase, 1 number, 1 special character" required class="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        <p class="mt-1 text-xs text-gray-500">8–15 chars, include 1 uppercase, 1 number, and 1 special character.</p>
       </div>
       <div>
         <label class="block text-sm text-gray-700 mb-1">Plan</label>
@@ -55,6 +56,11 @@
       const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value.trim();
       const plan = document.getElementById('plan').value;
+      const passOk = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,15}$/.test(password);
+      if (!passOk) {
+        alert('Password must be 8–15 chars with at least 1 uppercase, 1 number, and 1 special character.');
+        return;
+      }
       try {
         await signUp({ email, password, name, plan });
         alert('Check your email for verification to complete signup. After verifying, return to login.');
