@@ -245,9 +245,21 @@
         /* Glass effect panels */
         .glass-panel {
             background: rgba(255,255,255,0.55) !important;
-            -webkit-backdrop-filter: blur(12px) saturate(140%);
-            backdrop-filter: blur(12px) saturate(140%);
-            border-color: rgba(255,255,255,0.35) !important;
+            -webkit-backdrop-filter: blur(14px) saturate(160%);
+            backdrop-filter: blur(14px) saturate(160%);
+            border-color: rgba(255,255,255,0.45) !important;
+            box-shadow: 0 8px 24px rgba(2,8,20,0.06), 0 2px 6px rgba(2,8,20,0.06);
+        }
+
+        /* Floating input wrapper */
+        .input-float {
+            background: rgba(255,255,255,0.75);
+            -webkit-backdrop-filter: blur(10px) saturate(160%);
+            backdrop-filter: blur(10px) saturate(160%);
+            border: 1px solid rgba(255,255,255,0.6);
+            border-radius: 16px;
+            padding: 6px;
+            box-shadow: 0 12px 32px rgba(2,8,20,0.10), 0 4px 12px rgba(2,8,20,0.08);
         }
 
         /* QRaptor Branding */
@@ -553,11 +565,11 @@
             <div class="bg-white glass-panel border-t border-gray-200 message-input-container">
                 <div class="max-w-4xl mx-auto">
                     <div class="flex items-end">
-                        <div class="flex-1 relative">
+                        <div class="flex-1 relative input-float">
                             <textarea
                                 id="messageInput"
                                 placeholder="Ask your legal question here..."
-                                class="w-full px-4 md:px-6 py-3 md:py-4 pr-14 md:pr-16 border border-gray-300 rounded-xl md:rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm md:text-base"
+                                class="w-full px-4 md:px-6 py-3 md:py-4 pr-14 md:pr-16 border border-transparent bg-white/90 rounded-xl md:rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm md:text-base shadow-sm"
                                 rows="1"
                                 style="min-height: 48px; max-height: 120px;"
                             ></textarea>
