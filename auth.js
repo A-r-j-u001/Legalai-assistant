@@ -5,9 +5,22 @@ let configLoaded = false;
 
 async function loadConfig() {
   if (configLoaded) return;
-  const res = await fetch('/config');
-  if (!res.ok) throw new Error('Supabase config not set');
-  const { supabaseUrl, supabaseAnonKey } = await res.json();
+  const res = await fetch('/config', { headers: { Accept: 'application/json' } });
+  const text = await res.text();
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch (e) {
+    throw new Error('Config endpoint returned non-JSON. Ensure server is restarted and /config exists.');
+  }
+  if (!res.ok) {
+    const msg = parsed && parsed.error ? parsed.error : 'Supabase config not set';
+    throw new Error(msg);
+  }
+  const { supabaseUrl, supabaseAnonKey } = parsed || {};
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Missing SUPABASE_URL or SUPABASE_ANON_KEY');
+  }
   supabase = createClient(supabaseUrl, supabaseAnonKey);
   configLoaded = true;
 }
