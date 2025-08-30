@@ -489,7 +489,8 @@
 
                 <!-- Recent Chats -->
                 <div class="mt-8 sidebar-content">
-                    <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 px-2">Recent Chats</h3>
+                    <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 px-2">Recent Chats</h3>
+                    <p class="text-[11px] text-gray-500 italic px-2 mb-2">Note: Recent chats reset on page refresh.</p>
                     <ul class="space-y-1" id="recentChats">
                         <li><button class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-all duration-200 truncate">Contract Review - ABC Corp</button></li>
                         <li><button class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-all duration-200 truncate">Employment Law Query</button></li>
@@ -683,6 +684,12 @@
             document.getElementById('welcomeTime').textContent = getCurrentTime();
             updateConnectionStatus('connected', 'Connected to Legal Agent • Ready');
             updateAPIStatus('connected', 'Legal Agent Ready');
+
+            // Clear stored recents on each refresh as per requirement
+            try {
+                localStorage.removeItem('chat_sessions');
+                localStorage.removeItem('current_session_id');
+            } catch (e) {}
 
             // Load sessions and open the latest
             loadSessions();
