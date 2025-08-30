@@ -620,6 +620,7 @@
                 <div class="max-w-4xl mx-auto">
                     <div class="flex items-end">
                         <div class="flex-1 relative input-float">
+                            <div id="attachmentPreview" class="hidden flex flex-wrap items-center gap-2 px-2 pt-1 pb-2"></div>
                             <textarea
                                 id="messageInput"
                                 placeholder="Ask your legal question here..."
@@ -988,6 +989,62 @@
             return null;
         }
 
+        function truncateName(name, max = 18) {
+            if (!name) return '';
+            return name.length > max ? name.slice(0, max - 3) + '…' + name.slice(-3) : name;
+        }
+
+        function renderAttachmentPreview() {
+            const container = document.getElementById('attachmentPreview');
+            if (!container) return;
+            container.innerHTML = '';
+            if (!attachments.length) { container.classList.add('hidden'); return; }
+            container.classList.remove('hidden');
+
+            attachments.forEach((item, idx) => {
+                const chip = document.createElement('div');
+                chip.className = 'flex items-center gap-2 px-2 py-1 bg-white/90 border border-gray-200 rounded-lg shadow-sm';
+
+                let thumb;
+                if (item.kind === 'image') {
+                    const url = item.previewUrl || URL.createObjectURL(item.file);
+                    item.previewUrl = url;
+                    thumb = document.createElement('img');
+                    thumb.src = url;
+                    thumb.alt = item.file.name;
+                    thumb.className = 'w-8 h-8 rounded object-cover border border-gray-200';
+                } else {
+                    thumb = document.createElement('div');
+                    thumb.className = 'w-8 h-8 rounded bg-gray-100 text-gray-600 flex items-center justify-center border border-gray-200';
+                    const i = document.createElement('i');
+                    i.className = item.kind === 'pdf' ? 'fas fa-file-pdf' : 'fas fa-file-word';
+                    thumb.appendChild(i);
+                }
+
+                const nameEl = document.createElement('span');
+                nameEl.className = 'text-xs text-gray-700 max-w-[120px] truncate';
+                nameEl.title = item.file.name;
+                nameEl.textContent = truncateName(item.file.name);
+
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'ml-1 p-1 text-gray-400 hover:text-red-600';
+                removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+                removeBtn.addEventListener('click', () => {
+                    const it = attachments[idx];
+                    if (it && it.previewUrl) { try { URL.revokeObjectURL(it.previewUrl); } catch (e) {} }
+                    attachments.splice(idx, 1);
+                    updateAttachmentBadge();
+                    updateSendButton();
+                    renderAttachmentPreview();
+                });
+
+                chip.appendChild(thumb);
+                chip.appendChild(nameEl);
+                chip.appendChild(removeBtn);
+                container.appendChild(chip);
+            });
+        }
+
         function addAttachments(files) {
             const arr = Array.from(files || []);
             const allowed = arr.map(f => ({ file: f, kind: detectKind(f) })).filter(x => x.kind);
@@ -995,6 +1052,7 @@
             attachments = attachments.concat(allowed);
             updateAttachmentBadge();
             updateSendButton();
+            renderAttachmentPreview();
         }
 
         async function readAsArrayBuffer(file) {
@@ -1089,6 +1147,9 @@
         if (imageInput) imageInput.addEventListener('change', (e) => addAttachments(e.target.files));
         if (pdfInput) pdfInput.addEventListener('change', (e) => addAttachments(e.target.files));
         if (docInput) docInput.addEventListener('change', (e) => addAttachments(e.target.files));
+
+        // Render preview on load (in case of retained state)
+        renderAttachmentPreview();
 
         if (messageInput) {
             messageInput.addEventListener('paste', (e) => {
@@ -1337,9 +1398,13 @@
 
                 addMessage(errorMessage, 'assistant', true);
             } finally {
+                try {
+                    attachments.forEach(it => { if (it.previewUrl) URL.revokeObjectURL(it.previewUrl); });
+                } catch (e) {}
                 attachments = [];
                 updateAttachmentBadge();
                 updateSendButton();
+                renderAttachmentPreview();
                 if (attachmentMenu) attachmentMenu.classList.add('hidden');
                 if (attachBtn) attachBtn.setAttribute('aria-expanded','false');
             }
