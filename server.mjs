@@ -10,15 +10,6 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json({ limit: '1mb' }));
 
-// Public config endpoint for client to fetch Supabase keys (do NOT commit secrets)
-app.get('/config', (req, res) => {
-  const supabaseUrl = process.env.SUPABASE_URL || '';
-  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
-  if (!supabaseUrl || !supabaseAnonKey) {
-    return res.status(500).json({ error: 'Missing SUPABASE_URL or SUPABASE_ANON_KEY' });
-  }
-  res.json({ supabaseUrl, supabaseAnonKey });
-});
 
 // Import the API handler (ESM default export)
 import handler from './api/agent.js';
