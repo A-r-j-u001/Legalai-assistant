@@ -6,22 +6,38 @@
   <title>Guest Login • LegalAI</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    .qraptor-brand { display:flex; align-items:center; justify-content:center; padding:8px 12px; background:linear-gradient(135deg,#f8fafc 0%,#e2e8f0 100%); border-bottom:1px solid #e2e8f0; font-size:12px; color:#64748b; text-decoration:none; }
+    .qraptor-brand:hover { background:linear-gradient(135deg,#e2e8f0 0%,#cbd5e1 100%); color:#475569; }
+    .qraptor-brand img { height:16px; width:auto; margin-right:6px; }
+  </style>
 </head>
-<body class="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-  <div class="w-full max-w-sm sm:max-w-md bg-white rounded-2xl p-6 shadow border border-gray-200 text-center">
-    <div class="flex items-center justify-center space-x-3 mb-4">
-      <div class="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-        <i class="fas fa-scale-balanced text-white text-xl"></i>
+<body class="min-h-screen bg-gray-50 flex flex-col">
+  <a href="https://qraptor.ai" target="_blank" class="qraptor-brand">
+    <img src="https://qraptor.ai/qraptor-light.svg" alt="QRaptor" />
+    <span>Powered by QRaptor AI</span>
+  </a>
+  <div class="flex-1 flex items-center justify-center p-4">
+    <div class="w-full max-w-sm sm:max-w-md bg-white rounded-2xl p-6 shadow border border-gray-200">
+      <div class="flex items-center space-x-3 mb-4">
+        <div class="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+          <i class="fas fa-scale-balanced text-white text-xl"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold text-gray-900">LegalAI</h1>
+          <p class="text-xs text-gray-500">Your Legal Assistant</p>
+        </div>
       </div>
-      <div class="text-left">
-        <h1 class="text-xl font-bold text-gray-900">LegalAI</h1>
-        <p class="text-xs text-gray-500">Guest access</p>
-      </div>
+
+      <p class="text-sm text-gray-600 mb-3">Ask legal questions, get structured guidance, and draft-ready insights in seconds.</p>
+      <ul class="text-sm text-gray-600 space-y-2 mb-4">
+        <li class="flex items-center"><i class="fas fa-circle-check text-green-600 mr-2"></i> Contract review highlights</li>
+        <li class="flex items-center"><i class="fas fa-circle-check text-green-600 mr-2"></i> Legal research summaries</li>
+        <li class="flex items-center"><i class="fas fa-circle-check text-green-600 mr-2"></i> Compliance checklists</li>
+      </ul>
+
+      <button id="guestBtn" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200 ease-out active:scale-[0.98]">Continue as Guest</button>
     </div>
-
-    <p class="text-sm text-gray-600 mb-4">Continue as guest to open the assistant.</p>
-
-    <button id="guestBtn" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200 ease-out active:scale-[0.98]">Continue as Guest</button>
   </div>
 
   <script>
